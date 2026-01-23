@@ -1,11 +1,14 @@
 #include <numeric>
 
 #include <dckp_ienum/fkp_solver.hpp>
+#include <dckp_ienum/profiler.hpp>
 #include <dckp_ienum/types.hpp>
 
 namespace dckp_ienum {
 
 FkpResult solve_fkp(const Eigen::ArrayX<float_t>& ps, const Eigen::ArrayX<int_weight_t>& ws, const int_weight_t c) {
+    profiler::tic("solve_fkp");
+
     if (ps.size() != ws.size()) {
         throw "wow gj m8";
     }
@@ -52,6 +55,8 @@ FkpResult solve_fkp(const Eigen::ArrayX<float_t>& ps, const Eigen::ArrayX<int_we
             break;
         }
     }
+
+    profiler::toc("solve_fkp");
 
     return ans;
 }

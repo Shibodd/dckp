@@ -10,7 +10,15 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 # list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # find_package(GUROBI REQUIRED)
 
-add_executable (${PROJECT_NAME} src/main.cpp src/ldckp_solver.cpp src/instance_parser.cpp src/fkp_solver.cpp)
+add_executable (${PROJECT_NAME}
+    src/solution_ldckp_to_dckp.cpp
+    src/instance_parser.cpp
+    src/solution_check.cpp
+    src/ldckp_solver.cpp
+    src/fkp_solver.cpp
+    src/profiler.cpp
+    src/main.cpp
+)
 target_compile_features (${PROJECT_NAME} PRIVATE cxx_std_17)
 target_compile_options (${PROJECT_NAME} PRIVATE -Wall -Werror -Wpedantic)
 target_include_directories (${PROJECT_NAME} PRIVATE include)

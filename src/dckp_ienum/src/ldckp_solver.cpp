@@ -4,6 +4,7 @@
 
 #include <dckp_ienum/ldckp_solver.hpp>
 #include <dckp_ienum/fkp_solver.hpp>
+#include <dckp_ienum/profiler.hpp>
 
 #ifdef ENABLE_TELEMETRY
 #include <dckp_ienum/telemetry_socket.hpp>
@@ -43,6 +44,8 @@ LdckpResult::LdckpResult(std::size_t n, std::size_t m)  :
 }
 
 LdckpResult solve_ldckp(const Instance& instance) {
+    profiler::tic("solve_ldckp");
+
     const item_index_t n = instance.items().size();
     const conflict_index_t m = instance.conflicts().size();
 
@@ -138,6 +141,8 @@ LdckpResult solve_ldckp(const Instance& instance) {
         TelemetrySocket::get().send("ldckp_solver", tel);
         #endif // ENABLE_TELEMETRY
     }
+
+    profiler::toc("solve_ldckp");
 
     return result;
 }
