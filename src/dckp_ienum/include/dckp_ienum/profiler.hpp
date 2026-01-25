@@ -15,7 +15,7 @@ struct Stats {
     std::chrono::nanoseconds last;
     std::chrono::nanoseconds max;
     std::chrono::nanoseconds min;
-    std::chrono::duration<double> avg;
+    std::chrono::nanoseconds total;
     std::size_t count;
 
     Stats(std::string_view name) :
@@ -23,16 +23,18 @@ struct Stats {
         last(0),
         max(std::numeric_limits<std::chrono::nanoseconds::rep>::min()),
         min(std::numeric_limits<std::chrono::nanoseconds::rep>::max()),
-        avg(std::numeric_limits<double>::signaling_NaN()),
+        total(0),
         count(0)
     {}
 
     friend std::ostream& operator<<(std::ostream& os, const Stats& stats) {
         using T = std::chrono::microseconds;
-        os << stats.name << ":\n";
-        os << "Avg " << std::chrono::duration_cast<T>(stats.avg).count() << "us (" << stats.count << " samples)\n";
+        os << stats.name << " (" << stats.count << " samples):\n";
+        os << "Avg " << std::chrono::duration_cast<T>(stats.total / std::max<decltype(stats.count)>(1, stats.count)).count() << "us, "
+           << "Total " << std::chrono::duration_cast<T>(stats.total).count() << "us\n";
         os << "Max " << std::chrono::duration_cast<T>(stats.max).count() << "us, "
            << "Min " << std::chrono::duration_cast<T>(stats.min).count() << "us";
+           
         return os;
     }
 };

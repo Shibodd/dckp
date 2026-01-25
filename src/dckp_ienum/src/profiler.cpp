@@ -39,12 +39,8 @@ void toc(std::string_view name) {
     stats.last_start.reset();
 
     auto elapsed = end - start;
+    stats.total += elapsed;
     stats.last = elapsed;
-    if (stats.count == 0) {
-        stats.avg = elapsed;
-    } else {
-        stats.avg += (std::chrono::duration<double>(elapsed) - stats.avg) / static_cast<double>(stats.count + 1);
-    }
     stats.max = std::max(stats.max, elapsed);
     stats.min = std::min(stats.min, elapsed);
     ++stats.count;
