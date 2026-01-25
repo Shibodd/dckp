@@ -34,13 +34,6 @@ struct Solution {
     int_weight_t w = 0;
 
     int_profit_t ub = std::numeric_limits<int_profit_t>::max();
-    int_profit_t lb = 0;
-
-    void update_feasible(int_profit_t p_new, int_weight_t w_new) {
-        p = p_new;
-        w = w_new;
-        lb = std::max(lb, p_new);
-    }
 };
 
 } // namespace dckp_ienum

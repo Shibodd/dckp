@@ -10,8 +10,8 @@ void solution_ldckp_to_dckp(const dckp_ienum::Instance& instance, const LdckpRes
 
     // Get a feasible solution to the unconstrained binary knapsack problem
 
-    solution.x = result.x_opt.cast<bool>();
-    solution.ub = std::min(solution.ub, static_cast<int_profit_t>(result.profit_opt));
+    solution.x = result.x_opt.cwiseEqual(float_t(1.0));
+    solution.ub = std::min(solution.ub, static_cast<int_profit_t>(result.L_opt));
 
     // Satisfy conflict constraints by dropping items
     for (const InstanceConflict& conflict : instance.conflicts()) {
@@ -28,9 +28,8 @@ void solution_ldckp_to_dckp(const dckp_ienum::Instance& instance, const LdckpRes
         }
     }
 
-    solution.p = solution.x.cast<int_profit_t>().matrix().dot(instance.profits().matrix());
-    solution.w = solution.x.cast<int_weight_t>().matrix().dot(instance.weights().matrix());
-    solution.lb = std::max(solution.lb, solution.p);
+    solution.p = solution.x.select(instance.profits(), 0).sum();
+    solution.w = solution.x.select(instance.weights(), 0).sum();
 
     profiler::toc("solution_ldckp_to_dckp");
 }

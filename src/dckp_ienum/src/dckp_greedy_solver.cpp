@@ -16,21 +16,19 @@ void solve_dckp_greedy(const dckp_ienum::Instance& instance, Solution& soln) {
         // If we add this item, will the solution still be feasible?
         int_profit_t p_new = soln.p + instance.profit(i);
         int_weight_t w_new = soln.w + instance.weight(i);
-
-        bool unfeasible = false;
-        unfeasible |= p_new > soln.ub;
-        unfeasible |= w_new > instance.capacity();
+        if (w_new > instance.capacity()) {
+            continue;
+        }
 
         soln.x(i) = true;
-        unfeasible |= solution_has_conflicts(instance, soln.x);
-
-        if (unfeasible) {
+        if (solution_has_conflicts(instance, soln.x)) {
             soln.x(i) = false;
             continue;
         }
 
         // Solution is feasible and obviously better - update the solution
-        soln.update_feasible(p_new, w_new);
+        soln.p = p_new;
+        soln.w = w_new;
     }
 
     profiler::toc("solve_dckp_greedy");

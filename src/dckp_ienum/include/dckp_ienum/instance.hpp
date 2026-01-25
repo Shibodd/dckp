@@ -44,7 +44,7 @@ public:
     auto weight(Eigen::Index i) const { return weights()(i); }
     
     auto profits() const { return m_profits.topRows(num_items()); }
-    auto profit(Eigen::Index i) const { return weights()(i); }
+    auto profit(Eigen::Index i) const { return profits()(i); }
 
     auto s2o_index_map() const { return m_s2o_indices.topRows(num_items()); }
     auto o2s_index_map() const { return m_o2s_indices.topRows(num_items()); }

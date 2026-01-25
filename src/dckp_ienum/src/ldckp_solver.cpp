@@ -72,7 +72,7 @@ LdckpResult solve_ldckp(const Instance& instance, unsigned int max_k, float_t al
         ps = instance.profits().cast<float_t>();
         for (conflict_index_t i = 0; i < m; ++i) {
             const InstanceConflict& conflict = instance.conflicts()[i];
-            const double conflict_lambda = lambdak(i);
+            const float_t conflict_lambda = lambdak(i);
 
             ps(conflict.i) -= conflict_lambda;
             ps(conflict.j) -= conflict_lambda;
