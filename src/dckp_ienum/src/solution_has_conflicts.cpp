@@ -4,7 +4,7 @@
 namespace dckp_ienum {
 
 bool solution_has_conflicts(const dckp_ienum::Instance& instance, const Eigen::ArrayX<bool>& x) {
-    profiler::tic("solution_has_conflicts");
+    profiler::ScopedTicToc tictoc("solution_has_conflicts");
 
     for (conflict_index_t i = 0; i < instance.num_items(); ++i) {
         const InstanceConflict& conflict = instance.conflicts().at(i);
@@ -13,7 +13,6 @@ bool solution_has_conflicts(const dckp_ienum::Instance& instance, const Eigen::A
         }
     }
 
-    profiler::toc("solution_has_conflicts");
     return false;
 }
 

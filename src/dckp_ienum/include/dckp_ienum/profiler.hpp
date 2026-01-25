@@ -42,5 +42,22 @@ void toc(std::string_view name);
 const Stats& stats(std::string_view name);
 void print_stats(std::ostream& os);
 
+class ScopedTicToc {
+    std::string_view m_name;
+public:
+    ScopedTicToc(std::string_view name) : m_name(name) {
+        tic(name);
+    }
+    ~ScopedTicToc() {
+        toc(m_name);
+    }
+
+    ScopedTicToc(const ScopedTicToc&) = delete;
+    ScopedTicToc(ScopedTicToc&&) = delete;
+    ScopedTicToc& operator=(const ScopedTicToc&) = delete;
+    ScopedTicToc& operator=(ScopedTicToc&&) = delete;
+
+};
+
 } // namespace profiler
 } // namespace dckp_ienum

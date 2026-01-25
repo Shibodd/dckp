@@ -4,11 +4,9 @@
 
 namespace dckp_ienum {
 
-bool solve_dckp_greedy(const dckp_ienum::Instance& instance, Solution& soln) {
+void solve_dckp_greedy(const dckp_ienum::Instance& instance, Solution& soln) {
     profiler::tic("solve_dckp_greedy");
 
-    bool changed = false;
-    
     // Iterating over items by p/w ratio, add each that fits
     for (item_index_t i = 0; i < instance.num_items(); ++i) {
         // Skip items that are already in the knapsack
@@ -22,19 +20,20 @@ bool solve_dckp_greedy(const dckp_ienum::Instance& instance, Solution& soln) {
         bool unfeasible = false;
         unfeasible |= p_new > soln.ub;
         unfeasible |= w_new > instance.capacity();
+
+        soln.x(i) = true;
         unfeasible |= solution_has_conflicts(instance, soln.x);
+
         if (unfeasible) {
+            soln.x(i) = false;
             continue;
         }
 
         // Solution is feasible and obviously better - update the solution
-        changed = true;
-        soln.x(i) = true;
         soln.update_feasible(p_new, w_new);
     }
 
     profiler::toc("solve_dckp_greedy");
-    return changed;
 }
 
 } // namespace dckp_ienum

@@ -43,7 +43,7 @@ LdckpResult::LdckpResult(std::size_t n, std::size_t m)  :
     lambda_opt.setConstant(invalid_v<float_t>);
 }
 
-LdckpResult solve_ldckp(const Instance& instance) {
+LdckpResult solve_ldckp(const Instance& instance, unsigned int max_k, float_t alpha, float_t eps) {
     profiler::tic("solve_ldckp");
 
     const item_index_t n = instance.num_items();
@@ -95,17 +95,15 @@ LdckpResult solve_ldckp(const Instance& instance) {
 
         // Termination condition
         // TODO: try different conditions
-        if (result.k >= 0) {
+        if (result.k >= max_k) {
             break;
         }
 
         float_t deltaL = 0.0;
         if (Lkm1.has_value()) {
-            constexpr float_t EPS = static_cast<float_t>(1e-3);
-
             deltaL = Lk - *Lkm1;
 
-            if (deltaL >= -EPS) {
+            if (deltaL >= -eps) {
                 break;
             }
         }
@@ -120,7 +118,7 @@ LdckpResult solve_ldckp(const Instance& instance) {
         
         // Projected subgradient with fixed step size
         // TODO: try different step size rules
-        lambdak -= static_cast<float_t>(1.0) * dlambdak;
+        lambdak -= static_cast<float_t>(alpha) * dlambdak;
         lambdak = lambdak.cwiseMax(static_cast<float_t>(0.0));
 
         #ifdef ENABLE_TELEMETRY
