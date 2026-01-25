@@ -94,8 +94,21 @@ LdckpResult solve_ldckp(const Instance& instance) {
         // Compute value of lagrangian
         const float_t Lk = fkp_result.profit + lambdak.sum();
 
+        // Update best solution
+        if (Lk < result.L_opt) {
+            result.L_opt = Lk;
+            result.lambda_opt = lambdak;
+            result.profit_opt = fkp_result.profit;
+            result.weight_opt = fkp_result.weight;
+            result.x_opt = fkp_result.x;
+        }
+
         // Termination condition
         // TODO: try different conditions
+        if (result.k >= 0) {
+            break;
+        }
+
         float_t deltaL = 0.0;
         if (Lkm1.has_value()) {
             constexpr float_t EPS = static_cast<float_t>(1e-3);
@@ -107,15 +120,6 @@ LdckpResult solve_ldckp(const Instance& instance) {
             }
         }
         Lkm1 = Lk;
-
-        // Update best solution
-        if (Lk < result.L_opt) {
-            result.L_opt = Lk;
-            result.lambda_opt = lambdak;
-            result.profit_opt = fkp_result.profit;
-            result.weight_opt = fkp_result.weight;
-            result.x_opt = fkp_result.x;
-        }
 
         // Compute derivative of lagrangian wrt lambda in lambdak
         dlambdak.setConstant(invalid_v<float_t>);

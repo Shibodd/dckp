@@ -1,11 +1,15 @@
 #include <stdexcept>
 #include <iostream>
 #include <charconv>
+#include <numeric>
 #include <fstream>
 #include <string>
 #include <regex>
 
+#include <Eigen/Dense>
+
 #include <dckp_ienum/instance.hpp>
+#include <dckp_ienum/profiler.hpp>
 
 namespace dckp_ienum {
 
@@ -102,5 +106,32 @@ void Instance::parse(const std::filesystem::path& path) {
     }
 }
 
+void Instance::sort_items() {
+    profiler::tic("sort_items");
+
+    // Compute profit/weight ratios for each item
+    Eigen::ArrayX<float_t> pws(parameters().n);
+    for (unsigned int i = 0; i < parameters().n; ++i) {
+        auto item = m_items.at(i);
+        pws(i) = static_cast<float_t>(item.p) / static_cast<float_t>(item.w);
+    }
+    
+    // Sort the items by descending profit/weight ratio
+    std::sort(m_items.begin(), m_items.end(), InstanceItem::GreaterPWRatio {});
+
+    // Compute a map from the old indices to the new
+    m_reverse_item_map.resize(parameters().n);
+    for (unsigned int i = 0; i < parameters().n; ++i) {
+        m_reverse_item_map(m_items.at(i).id) = i;
+    }
+
+    // Update the conflict map with the new indices
+    for (InstanceConflict& conflict : m_conflicts) {
+        conflict.i = m_reverse_item_map(conflict.i);
+        conflict.j = m_reverse_item_map(conflict.j);
+    }
+
+    profiler::toc("sort_items");
+}
 
 } // namespace dckp_ienum
