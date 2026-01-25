@@ -15,8 +15,7 @@ std::ostream& solution_print(std::ostream& os, const Solution& soln, const dckp_
             comma = true;
         }
     }
-    os << "\np: " << soln.p << ", w:" << soln.w << "\n";
-    os << "lb: " << soln.lb << ", ub:" << soln.ub;
+    os << "\np: " << soln.p << " (ub = " << soln.ub << "), w: " << soln.w;
     return os;
 }
 
