@@ -1,3 +1,4 @@
+#include "dckp_ienum/types.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <charconv>
@@ -56,8 +57,7 @@ static void parse_line(const std::string& line, const std::regex& regex, const s
 
 void Instance::clear() {
     m_conflicts.clear();
-    m_items.clear();
-    m_parameters = InstanceParameters {};
+    m_num_items = 0;
 }
 
 #define PARSE_LINE(name, ...) parse_line(line_buffer, regexes::name, #name, match_buffer __VA_OPT__(,) __VA_ARGS__)
@@ -71,15 +71,25 @@ void Instance::parse(const std::filesystem::path& path) {
     std::string line_buffer;
     std::smatch match_buffer;
 
-    READ_PARSE_LINE(n, m_parameters.n);
-    READ_PARSE_LINE(c, m_parameters.c);
+    READ_PARSE_LINE(n, m_num_items)
+    READ_PARSE_LINE(c, m_capacity);
+
+    m_o2s_indices.resize(num_items());
+    std::iota(m_o2s_indices.begin(), m_o2s_indices.end(), 0);
+
+    m_s2o_indices.resize(num_items());
+    std::iota(m_s2o_indices.begin(), m_s2o_indices.end(), 0);
+
+    m_weights.resize(num_items());
+    m_profits.resize(num_items());
+    
     READ_PARSE_LINE(vertices_hdr);
 
-    m_items.resize(m_parameters.n);
-    for (item_index_t i = 0; i < m_parameters.n; ++i) {
-        READ_PARSE_LINE(vertex, m_items[i].id, m_items[i].p, m_items[i].w);
-        if (m_items[i].id != i) {
-            throw BadInstanceException("vertices are not continuous or sorted");
+    for (item_index_t i = 0; i < num_items(); ++i) {
+        item_index_t file_id;
+        READ_PARSE_LINE(vertex, file_id, m_profits(i), m_weights(i));
+        if (file_id != i) {
+            throw BadInstanceException("vertices are not continuous");
         }
     }
     READ_PARSE_LINE(semicolon);
@@ -108,28 +118,37 @@ void Instance::parse(const std::filesystem::path& path) {
 
 void Instance::sort_items() {
     profiler::tic("sort_items");
-
-    // Compute profit/weight ratios for each item
-    Eigen::ArrayX<float_t> pws(parameters().n);
-    for (unsigned int i = 0; i < parameters().n; ++i) {
-        auto item = m_items.at(i);
-        pws(i) = static_cast<float_t>(item.p) / static_cast<float_t>(item.w);
-    }
     
-    // Sort the items by descending profit/weight ratio
-    std::sort(m_items.begin(), m_items.end(), InstanceItem::GreaterPWRatio {});
+    std::sort(m_s2o_indices.begin(), m_s2o_indices.end(), [&](item_index_t a, item_index_t b) {
+        float_t pwr_a = static_cast<float_t>(m_profits(a)) / static_cast<float_t>(m_weights(a));
+        float_t pwr_b = static_cast<float_t>(m_profits(b)) / static_cast<float_t>(m_weights(b));
+        return pwr_a > pwr_b;
+    });
 
     // Compute a map from the old indices to the new
-    m_reverse_item_map.resize(parameters().n);
-    for (unsigned int i = 0; i < parameters().n; ++i) {
-        m_reverse_item_map(m_items.at(i).id) = i;
+    for (unsigned int i = 0; i < m_num_items; ++i) {
+        m_o2s_indices(m_s2o_indices(i)) = i;
     }
 
     // Update the conflict map with the new indices
     for (InstanceConflict& conflict : m_conflicts) {
-        conflict.i = m_reverse_item_map(conflict.i);
-        conflict.j = m_reverse_item_map(conflict.j);
+        conflict.i = m_o2s_indices(conflict.i);
+        conflict.j = m_o2s_indices(conflict.j);
     }
+
+    // Reorder profits and weights
+    decltype(m_profits) profits;
+    decltype(m_weights) weights;
+    profits.resizeLike(m_profits);
+    weights.resizeLike(m_weights);
+
+    for (item_index_t i = 0; i < num_items(); ++i) {
+        profits(m_o2s_indices(i)) = m_profits(i);
+        weights(m_o2s_indices(i)) = m_weights(i);
+    }
+
+    m_profits = profits;
+    m_weights = weights;
 
     profiler::toc("sort_items");
 }

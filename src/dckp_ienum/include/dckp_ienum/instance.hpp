@@ -9,35 +9,6 @@
 
 namespace dckp_ienum {
 
-struct InstanceParameters {
-    item_index_t n;
-    int_weight_t c;
-
-    friend std::ostream& operator<<(std::ostream& os, const InstanceParameters& params) {
-        return os << "n:" << params.n << "\tc:" << params.c;
-    }
-};
-
-struct InstanceItem {
-    item_index_t id;
-    int_profit_t p;
-    int_weight_t w;
-
-    friend std::ostream& operator<<(std::ostream& os, const InstanceItem& item) {
-        return os << "id:" << item.id << "\tp:" << item.p << "\tw:" << item.w;
-    }
-
-    float_t pw_ratio() const {
-        return static_cast<float_t>(p) / static_cast<float_t>(w);
-    }
-
-    struct GreaterPWRatio {
-        bool operator()(const InstanceItem& a, const InstanceItem& b) const {
-            return a.pw_ratio() > b.pw_ratio();
-        }
-    };
-};
-
 struct InstanceConflict {
     item_index_t i;
     item_index_t j;
@@ -52,21 +23,38 @@ struct BadInstanceException : public std::runtime_error {
 };
 
 class Instance {
-    Eigen::ArrayX<item_index_t> m_reverse_item_map;
-    std::vector<InstanceItem> m_items;
+    Eigen::ArrayX<item_index_t> m_o2s_indices; // original-to-storage map
+    Eigen::ArrayX<item_index_t> m_s2o_indices; // storage-to-original map
+
+    Eigen::ArrayX<int_weight_t> m_weights;
+    Eigen::ArrayX<int_profit_t> m_profits;
+
+    int_weight_t m_capacity;
+    item_index_t m_num_items;
+    
     std::vector<InstanceConflict> m_conflicts;
-    InstanceParameters m_parameters;
 
 public:
-    void parse(const std::filesystem::path& path);
-    void clear();
-
-    void sort_items();
-
-    auto& reverse_item_map() const { return m_reverse_item_map; }
-    auto& items() const { return m_items; }
+    item_index_t num_items() const { return m_num_items; }
+    int_weight_t capacity() const { return m_capacity; }
+    
     auto& conflicts() const { return m_conflicts; }
-    auto& parameters() const { return m_parameters; }
+
+    auto weights() const { return m_weights.topRows(num_items()); }
+    auto weight(Eigen::Index i) const { return weights()(i); }
+    
+    auto profits() const { return m_profits.topRows(num_items()); }
+    auto profit(Eigen::Index i) const { return weights()(i); }
+
+    auto s2o_index_map() const { return m_s2o_indices.topRows(num_items()); }
+    auto o2s_index_map() const { return m_o2s_indices.topRows(num_items()); }
+    auto s2o_index(item_index_t i) const { return s2o_index_map()(i); }
+    auto o2s_index(item_index_t i) const { return o2s_index_map()(i); }
+    
+    void parse(const std::filesystem::path& path);
+
+    void clear();
+    void sort_items();
 };
 
 } // namespace dckp_ienum

@@ -12,8 +12,10 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 add_executable (${PROJECT_NAME}
     src/solution_ldckp_to_dckp.cpp
+    src/solution_has_conflicts.cpp
+    src/dckp_greedy_solver.cpp
     src/instance_parser.cpp
-    src/solution_check.cpp
+    src/solution_print.cpp
     src/ldckp_solver.cpp
     src/fkp_solver.cpp
     src/profiler.cpp

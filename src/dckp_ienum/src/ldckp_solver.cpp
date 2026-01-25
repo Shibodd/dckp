@@ -46,7 +46,7 @@ LdckpResult::LdckpResult(std::size_t n, std::size_t m)  :
 LdckpResult solve_ldckp(const Instance& instance) {
     profiler::tic("solve_ldckp");
 
-    const item_index_t n = instance.items().size();
+    const item_index_t n = instance.num_items();
     const conflict_index_t m = instance.conflicts().size();
 
     // Prepare result with invalid values
@@ -64,22 +64,12 @@ LdckpResult solve_ldckp(const Instance& instance) {
     Eigen::VectorX<float_t> lambdak(m);
     lambdak.setZero();
 
-    // Weights are constant
-    Eigen::ArrayX<int_weight_t> ws(n);
-    ws.setConstant(invalid_v<int_weight_t>);
-    for (conflict_index_t i = 0; i < n; ++i) {
-        ws(i) = instance.items()[i].w;
-    }
-    
     // Minimize Lagrangian by subgradient method on lambda
     std::optional<float_t> Lkm1;
     for (result.k = 0; ; ++result.k) {
         // Compute profits for fractional knapsack problem
-        ps.setConstant(invalid_v<float_t>);
-        for (item_index_t i = 0; i < n; ++i) {
-            const InstanceItem& item = instance.items()[i];
-            ps(i) = item.p;
-        }
+
+        ps = instance.profits().cast<float_t>();
         for (conflict_index_t i = 0; i < m; ++i) {
             const InstanceConflict& conflict = instance.conflicts()[i];
             const double conflict_lambda = lambdak(i);
@@ -89,7 +79,7 @@ LdckpResult solve_ldckp(const Instance& instance) {
         }
 
         // Solve fractional knapsack problem
-        const FkpResult fkp_result = solve_fkp(ps, ws, instance.parameters().c);
+        const FkpResult fkp_result = solve_fkp(ps, instance.weights(), instance.capacity());
         
         // Compute value of lagrangian
         const float_t Lk = fkp_result.profit + lambdak.sum();
@@ -124,7 +114,7 @@ LdckpResult solve_ldckp(const Instance& instance) {
         // Compute derivative of lagrangian wrt lambda in lambdak
         dlambdak.setConstant(invalid_v<float_t>);
         for (conflict_index_t i = 0; i < m; ++i) {
-            const InstanceConflict& conflict = instance.conflicts()[i];
+            const InstanceConflict& conflict = instance.conflicts().at(i);
             dlambdak(i) = static_cast<float_t>(1.0) - fkp_result.x(conflict.i) - fkp_result.x(conflict.j);
         }
         
