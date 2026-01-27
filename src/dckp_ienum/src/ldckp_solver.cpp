@@ -1,3 +1,4 @@
+#include "dckp_ienum/types.hpp"
 #include <optional>
 #include <limits>
 #include <thread>
@@ -43,7 +44,7 @@ LdckpResult::LdckpResult(std::size_t n, std::size_t m)  :
     lambda_opt.setConstant(invalid_v<float_t>);
 }
 
-LdckpResult solve_ldckp(const Instance& instance, unsigned int max_k, float_t alpha, float_t eps) {
+LdckpResult solve_ldckp(const Instance& instance, std::vector<bool> pinned_items, unsigned int max_k, float_t alpha, float_t eps) {
     profiler::tic("solve_ldckp");
 
     const item_index_t n = instance.num_items();
@@ -79,7 +80,7 @@ LdckpResult solve_ldckp(const Instance& instance, unsigned int max_k, float_t al
         }
 
         // Solve fractional knapsack problem
-        const FkpResult fkp_result = solve_fkp(ps, instance.weights(), instance.capacity());
+        const FkpResult fkp_result = solve_fkp(ps, pinned_items, instance.weights(), instance.capacity());
         
         // Compute value of lagrangian
         const float_t Lk = fkp_result.profit + lambdak.sum();

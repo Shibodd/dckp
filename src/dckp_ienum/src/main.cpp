@@ -1,3 +1,4 @@
+#include "dckp_ienum/dckp_ienum_solver.hpp"
 #include <filesystem>
 #include <iostream>
 #include <chrono>
@@ -14,14 +15,32 @@
 #include <dckp_ienum/profiler.hpp>
 #include <dckp_ienum/types.hpp>
 
+#include <ostream>
+#include <signal.h>
+
+void my_handler(int s)
+{
+    dckp_ienum::profiler::print_stats(std::cout);
+    exit(1);
+}
+
 int main() {
+    signal(SIGINT, my_handler);
+
     feenableexcept(FE_INVALID);
 
+    
+
     dckp_ienum::Instance instance;
-    instance.parse("../../Instances/KPCG_instances/R10/BPPC_2_0_8.txt_0.2");
+    instance.parse("../../Instances/KPCG_instances/C1/BPPC_4_0_2.txt_0.9");
     instance.sort_items();
 
-    auto result = dckp_ienum::solve_ldckp(instance, 10000, 1.0);
+    std::cout << "n: " << instance.num_items() << std::endl;
+    std::cout << "m: " << instance.conflicts().size() << std::endl;
+    std::cout << "c: " << instance.capacity() << std::endl;
+
+    auto result = dckp_ienum::solve_ldckp(instance, {}, 10000, 1.0);
+
 
     dckp_ienum::Solution solution;
     dckp_ienum::solution_ldckp_to_dckp(instance, result, solution);
@@ -38,5 +57,10 @@ int main() {
 
     dckp_ienum::solution_sanity_check(solution, instance);
 
+    dckp_ienum::solve_dckp_ienum(instance, solution.p, solution);
+    dckp_ienum::solution_sanity_check(solution, instance);
+
     dckp_ienum::profiler::print_stats(std::cout);
+
+    dckp_ienum::solution_print(std::cout, solution, instance) << std::endl;
 }

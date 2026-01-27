@@ -18,6 +18,6 @@ struct LdckpResult {
     LdckpResult(std::size_t n, std::size_t m);
 };
 
-LdckpResult solve_ldckp(const Instance& instance, unsigned int max_k = 5, float_t alpha = 1.0, float_t eps = 1e-3);
+LdckpResult solve_ldckp(const Instance& instance, std::vector<bool> pinned_items, unsigned int max_k = 5, float_t alpha = 1.0, float_t eps = 1e-3);
 
 } // namespace dckp_ienum

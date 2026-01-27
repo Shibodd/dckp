@@ -10,6 +10,6 @@ struct FkpResult {
     int_weight_t weight;
 };
 
-FkpResult solve_fkp(const Eigen::ArrayX<float_t>& ps, const Eigen::ArrayX<int_weight_t>& ws, int_weight_t c);
+FkpResult solve_fkp(const Eigen::ArrayX<float_t>& ps, const std::vector<bool>& pinned_items, const Eigen::ArrayX<int_weight_t>& ws, const int_weight_t c);
 
 } // namespace dckp_ienum

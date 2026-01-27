@@ -6,22 +6,25 @@
 
 namespace dckp_ienum {
 
-FkpResult solve_fkp(const Eigen::ArrayX<float_t>& ps, const Eigen::ArrayX<int_weight_t>& ws, const int_weight_t c) {
+FkpResult solve_fkp(const Eigen::ArrayX<float_t>& ps, const std::vector<bool>& pinned_items, const Eigen::ArrayX<int_weight_t>& ws, const int_weight_t c) {
     profiler::tic("solve_fkp");
 
-    if (ps.size() != ws.size()) {
+    const item_index_t n = ps.size();
+    const item_index_t n_pinned = pinned_items.size();
+
+    if (n != ws.size() || n_pinned >= n) {
         throw "wow gj m8";
     }
 
-    const item_index_t n = ps.size();
+    const item_index_t n_free = n - n_pinned;
 
-    Eigen::ArrayX<item_index_t> indices(n);
-    std::iota(indices.begin(), indices.end(), item_index_t { 0 });
+    Eigen::ArrayX<item_index_t> indices(n_free);
+    std::iota(indices.begin(), indices.end(), n_pinned);
 
     // Sort indices by profit / weight ratio
-    Eigen::ArrayX<float_t> pws = ps / ws.cast<float_t>();
-    std::sort(indices.begin(), indices.end(), [&pws](item_index_t a, item_index_t b) {
-        return pws(a) > pws(b);
+    Eigen::ArrayX<float_t> pws = (ps / ws.cast<float_t>()).bottomRows(n_free);
+    std::sort(indices.begin(), indices.end(), [&pws, n_pinned](item_index_t a, item_index_t b) {
+        return pws(a - n_pinned) > pws(b - n_pinned);
     });
 
     FkpResult ans;
@@ -30,7 +33,16 @@ FkpResult solve_fkp(const Eigen::ArrayX<float_t>& ps, const Eigen::ArrayX<int_we
     ans.profit = static_cast<float_t>(0.0);
     ans.weight = 0;
 
-    for (item_index_t i = 0; i < n; ++i) 
+    // Account for pinned items
+    for (item_index_t i = 0; i < n_pinned; ++i) {
+        if (pinned_items[i]) {
+            ans.x(i) = true;
+            ans.profit += ps(i);
+            ans.weight += ws(i);
+        }
+    }
+
+    for (item_index_t i = 0; i < n_free; ++i) 
     {
         const float_t p = ps(indices(i));
         const int_weight_t w = ws(indices(i));
