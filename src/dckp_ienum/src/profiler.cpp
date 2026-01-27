@@ -1,7 +1,9 @@
 #include <chrono>
+#include <functional>
 #include <unordered_map>
 #include <stdexcept>
 #include <sstream>
+#include <vector>
 
 #include <dckp_ienum/profiler.hpp>
 
@@ -50,9 +52,16 @@ const Stats& stats(std::string_view name) {
 }
 
 void print_stats(std::ostream& os) {
+    using T = decltype(data)::value_type;
+    std::vector<std::reference_wrapper<T>> v(data.begin(), data.end());
+
+    std::sort(v.begin(), v.end(), [](auto a, auto b) {
+        return a.get().second.total < b.get().second.total;
+    });
+
     os << "\nPROFILER STATISTICS\n-----";
-    for (auto kvp : data) {
-        os << "-----\n" << kvp.second << "\n-----";
+    for (auto kvp : v) {
+        os << "-----\n" << kvp.get().second << "\n-----";
     }
     os << "-----\n\n";
 }
