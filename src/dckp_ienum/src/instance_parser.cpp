@@ -130,19 +130,25 @@ void Instance::sort_items() {
         m_o2s_indices(m_s2o_indices(i)) = i;
     }
 
+    m_rconflicts = m_conflicts;
+
     // Update the conflict map with the new indices, and normalize the conflicts (i <= j)
-    for (InstanceConflict& conflict : m_conflicts) {
+    for (conflict_index_t conflict_idx = 0; conflict_idx < m_conflicts.size(); ++conflict_idx) {
+        auto& conflict = m_conflicts[conflict_idx];
+        auto& rconflict = m_rconflicts[conflict_idx];
+
         item_index_t i = m_o2s_indices(conflict.i);
         item_index_t j = m_o2s_indices(conflict.j);
-        
-        conflict.i = std::min(i, j);
-        conflict.j = std::max(i, j);
+
+        // Conflict has i<=j
+        // Rconflict has i>=j
+        rconflict.j = conflict.i = std::min(i, j);
+        rconflict.i = conflict.j = std::max(i, j);
     }
 
     // Sort conflicts by i
-    std::sort(m_conflicts.begin(), m_conflicts.end(), [](const InstanceConflict& a, const InstanceConflict& b) {
-        return a.i < b.i;
-    });
+    std::sort(m_conflicts.begin(), m_conflicts.end(), InstanceConflict::IndexLt{});
+    std::sort(m_rconflicts.begin(), m_rconflicts.end(), InstanceConflict::IndexLt{});
 
     // Reorder profits and weights
     decltype(m_profits) profits;

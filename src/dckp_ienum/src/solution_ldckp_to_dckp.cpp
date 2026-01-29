@@ -5,13 +5,13 @@
 
 namespace dckp_ienum {
 
-void solution_ldckp_to_dckp(const dckp_ienum::Instance& instance, const LdckpResult& result, Solution& solution) {
+void solution_ldckp_to_dckp(const dckp_ienum::Instance& instance, const Eigen::ArrayX<float_t>& x, Solution& solution) {
     profiler::tic("solution_ldckp_to_dckp");
 
     // Get a feasible solution to the unconstrained binary knapsack problem
 
-    solution.x = result.x_opt.cwiseEqual(float_t(1.0));
-    solution.ub = std::min(solution.ub, static_cast<int_profit_t>(result.L_opt));
+    solution.x = x.cwiseEqual(float_t(1.0));
+    // solution.ub = std::min(solution.ub, static_cast<int_profit_t>(result.L_opt));
 
     // Satisfy conflict constraints by dropping items
     for (const InstanceConflict& conflict : instance.conflicts()) {

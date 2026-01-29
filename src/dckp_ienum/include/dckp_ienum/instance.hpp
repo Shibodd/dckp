@@ -16,6 +16,16 @@ struct InstanceConflict {
     friend std::ostream& operator<<(std::ostream& os, const InstanceConflict& conflict) {
         return os << conflict.i << "->" << conflict.j;
     }
+
+    struct IndexLt {
+        bool operator()(const InstanceConflict& a, const InstanceConflict& b) const {
+            if (a.i == b.i) {
+                return a.j < b.j;
+            } else {
+                return a.i < b.i;
+            }
+        }
+    };
 };
 
 struct BadInstanceException : public std::runtime_error {
@@ -33,12 +43,14 @@ class Instance {
     item_index_t m_num_items;
     
     std::vector<InstanceConflict> m_conflicts;
+    std::vector<InstanceConflict> m_rconflicts;
 
 public:
     item_index_t num_items() const { return m_num_items; }
     int_weight_t capacity() const { return m_capacity; }
     
     auto& conflicts() const { return m_conflicts; }
+    auto& rconflicts() const { return m_rconflicts; }
 
     auto weights() const { return m_weights.topRows(num_items()); }
     auto weight(Eigen::Index i) const { return weights()(i); }

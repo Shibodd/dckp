@@ -6,6 +6,6 @@
 
 namespace dckp_ienum {
 
-void solution_ldckp_to_dckp(const dckp_ienum::Instance& instance, const LdckpResult& ldckp_result, Solution& solution);
+void solution_ldckp_to_dckp(const dckp_ienum::Instance& instance, const Eigen::ArrayX<float_t>& x, Solution& solution);
 
 } // namespace dckp_ienum

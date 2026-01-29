@@ -1,3 +1,4 @@
+#include <limits>
 #include <numeric>
 
 #include <dckp_ienum/fkp_solver.hpp>
@@ -6,71 +7,40 @@
 
 namespace dckp_ienum {
 
-FkpResult solve_fkp(const Eigen::ArrayX<float_t>& ps, const std::vector<bool>& pinned_items, const Eigen::ArrayX<int_weight_t>& ws, const int_weight_t c) {
-    profiler::tic("solve_fkp");
+/*std::pair<item_index_t, float_t>*/ void solve_fkp_fast(const Instance& instance, item_index_t j, Solution& soln) {
+    profiler::ScopedTicToc tictoc("solve_fkp_fast");
 
-    const item_index_t n = ps.size();
-    const item_index_t n_pinned = pinned_items.size();
-
-    if (n != ws.size() || n_pinned >= n) {
-        throw "wow gj m8";
-    }
-
-    const item_index_t n_free = n - n_pinned;
-
-    Eigen::ArrayX<item_index_t> indices(n_free);
-    std::iota(indices.begin(), indices.end(), n_pinned);
-
-    // Sort indices by profit / weight ratio
-    Eigen::ArrayX<float_t> pws = (ps / ws.cast<float_t>()).bottomRows(n_free);
-    std::sort(indices.begin(), indices.end(), [&pws, n_pinned](item_index_t a, item_index_t b) {
-        return pws(a - n_pinned) > pws(b - n_pinned);
-    });
-
-    FkpResult ans;
-    ans.x.resize(n);
-    ans.x.setZero();
-    ans.profit = static_cast<float_t>(0.0);
-    ans.weight = 0;
-
-    // Account for pinned items
-    for (item_index_t i = 0; i < n_pinned; ++i) {
-        if (pinned_items[i]) {
-            ans.x(i) = true;
-            ans.profit += ps(i);
-            ans.weight += ws(i);
-        }
-    }
-
-    for (item_index_t i = 0; i < n_free; ++i) 
-    {
-        const float_t p = ps(indices(i));
-        const int_weight_t w = ws(indices(i));
-        float_t& xi = ans.x(indices(i));
-
-        // If taking this item doesn't profit us, stop
-        // Any item after this is even worse (we sorted them by p/w ratio)
-        if (p <= static_cast<float_t>(0.0)) {
+    for (item_index_t i = j + 1; i < instance.num_items(); ++i) {
+        if (soln.w == instance.capacity()) {
             break;
         }
 
-        const int_weight_t avail_c = c - ans.weight;
+        int_profit_t p = instance.profit(i);
+        if (p <= 0) {
+            break;
+        }
+        
+        int_weight_t w = instance.weight(i);
+        int_weight_t new_w = soln.w + w;
 
-        if (w <= avail_c) {
-            xi = static_cast<float_t>(1.0);
-            ans.profit += p;
-            ans.weight += w;
+        if (new_w <= instance.capacity()) {
+            soln.p += p;
+            soln.w = new_w;
+            soln.x[i] = true;
         } else {
-            xi = static_cast<float_t>(avail_c) / static_cast<float_t>(w);
-            ans.profit += xi * p;
-            ans.weight = c;
-            break;
+            // Set the UB to the FKP profit
+            float_t fraction = static_cast<float_t>(instance.capacity() - soln.w) / static_cast<float_t>(w);
+            soln.ub = soln.p + static_cast<int_profit_t>(fraction * static_cast<float_t>(p));
+            // return { i, fraction };
+            return;
         }
     }
 
-    profiler::toc("solve_fkp");
+    soln.ub = soln.p;
+    return;
 
-    return ans;
+    // no fraction
+    // return { instance.num_items(), std::numeric_limits<float_t>::signaling_NaN() };
 }
 
 } // namespace dckp_ienum

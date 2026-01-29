@@ -7,7 +7,7 @@ std::ostream& solution_print(std::ostream& os, const Solution& soln, const dckp_
     os << "Solution: ";
     bool comma = false;
     for (item_index_t i = 0; i < soln.x.size(); ++i) {
-        if (soln.x(i)) {
+        if (soln.x[i]) {
             if (comma) {
                 os << ", ";
             }

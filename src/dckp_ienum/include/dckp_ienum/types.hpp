@@ -29,7 +29,7 @@ constexpr T invalid_v = Invalid<T>::value;
 
 
 struct Solution {
-    Eigen::ArrayX<bool> x;
+    std::vector<bool> x;
     int_profit_t p = 0;
     int_weight_t w = 0;
 
