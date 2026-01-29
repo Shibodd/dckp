@@ -7,7 +7,7 @@
 
 namespace dckp_ienum {
 
-void solution_sanity_check(const Solution& solution, const dckp_ienum::Instance& instance) {
+void solution_sanity_check(const Solution& solution, const dckp_ienum::Instance& instance, bool check_conflicts) {
     int_profit_t profit = 0;
     int_weight_t weight = 0;
     for (item_index_t i = 0; i < instance.num_items(); ++i) {
@@ -17,7 +17,7 @@ void solution_sanity_check(const Solution& solution, const dckp_ienum::Instance&
         }
     }
 
-    bool has_conflicts = solution_has_conflicts(instance, solution.x);
+    bool has_conflicts = check_conflicts && solution_has_conflicts(instance, solution.x);
 
     std::ostringstream os;
 

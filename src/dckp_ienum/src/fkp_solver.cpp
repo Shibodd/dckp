@@ -7,40 +7,55 @@
 
 namespace dckp_ienum {
 
-/*std::pair<item_index_t, float_t>*/ void solve_fkp_fast(const Instance& instance, item_index_t j, Solution& soln) {
+void FkpResult::convert(const Instance&, Solution &soln, item_index_t jp1) {
+    soln.p = profit;
+    soln.w = weight;
+    soln.ub = ub;
+
+    for (item_index_t i = jp1; i < fractional_idx; ++i) {
+        soln.x[i] = true;
+    }
+    for (item_index_t i = fractional_idx; i < soln.x.size(); ++i) {
+        soln.x[i] = false;
+    }
+}
+
+FkpResult solve_fkp_fast(const Instance& instance, item_index_t jp1, int_profit_t fixed_p, int_weight_t fixed_w) {
     profiler::ScopedTicToc tictoc("solve_fkp_fast");
 
-    for (item_index_t i = j + 1; i < instance.num_items(); ++i) {
-        if (soln.w == instance.capacity()) {
+    FkpResult ans;
+    ans.weight = fixed_w;
+    ans.profit = fixed_p;
+
+    for (item_index_t i = jp1; i < instance.num_items(); ++i) {
+        if (ans.weight >= instance.capacity()) {
+            ans.fractional_idx = i;
             break;
         }
 
         int_profit_t p = instance.profit(i);
         if (p <= 0) {
+            ans.fractional_idx = i;
             break;
         }
         
         int_weight_t w = instance.weight(i);
-        int_weight_t new_w = soln.w + w;
+        int_weight_t new_w = ans.weight + w;
 
         if (new_w <= instance.capacity()) {
-            soln.p += p;
-            soln.w = new_w;
-            soln.x[i] = true;
+            ans.profit += p;
+            ans.weight = new_w;
         } else {
             // Set the UB to the FKP profit
-            float_t fraction = static_cast<float_t>(instance.capacity() - soln.w) / static_cast<float_t>(w);
-            soln.ub = soln.p + static_cast<int_profit_t>(fraction * static_cast<float_t>(p));
-            // return { i, fraction };
-            return;
+            float_t fraction = static_cast<float_t>(instance.capacity() - ans.weight) / static_cast<float_t>(w);
+            ans.ub = ans.profit + static_cast<int_profit_t>(fraction * static_cast<float_t>(p));
+            ans.fractional_idx = i;
+            return ans;
         }
     }
 
-    soln.ub = soln.p;
-    return;
-
-    // no fraction
-    // return { instance.num_items(), std::numeric_limits<float_t>::signaling_NaN() };
+    ans.ub = ans.profit;
+    return ans;
 }
 
 } // namespace dckp_ienum

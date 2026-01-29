@@ -1,3 +1,4 @@
+#include "dckp_ienum/conflicts.hpp"
 #include "dckp_ienum/dckp_ienum_solver.hpp"
 #include <filesystem>
 #include <iostream>
@@ -15,6 +16,8 @@
 #include <dckp_ienum/instance.hpp>
 #include <dckp_ienum/profiler.hpp>
 #include <dckp_ienum/types.hpp>
+
+#include <dckp_ienum/fkp_solver.hpp>
 
 #include <limits>
 #include <ostream>
@@ -49,7 +52,11 @@ int main() {
     solution.w = 0;
     solution.x.resize(instance.num_items(), false);
     dckp_ienum::solve_dckp_bnb(instance, solution);
-    dckp_ienum::profiler::print_stats(std::cout);
 
-    dckp_ienum::solution_print(std::cout, solution, instance) << std::endl;
+    // dckp_ienum::solve_dckp_ienum(instance, 2000, solution);
+
+    dckp_ienum::profiler::print_stats(std::cout);
+    
+    // dckp_ienum::solution_sanity_check(solution, instance);
+    // dckp_ienum::solution_print(std::cout, solution, instance) << std::endl;
 }

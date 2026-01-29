@@ -34,6 +34,10 @@ struct Solution {
     int_weight_t w = 0;
 
     int_profit_t ub = std::numeric_limits<int_profit_t>::max();
+
+    bool operator>(const Solution& other) const {
+        return p > other.p || (p == other.p && ub < other.ub);
+    }
 };
 
 } // namespace dckp_ienum

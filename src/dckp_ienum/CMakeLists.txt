@@ -16,6 +16,7 @@ add_executable (${PROJECT_NAME}
 src/solution_sanity_check.cpp
 src/dckp_bnb_solver.cpp
 src/ldckp_solver.cpp
+src/dckp_ienum_solver.cpp
 src/instance_parser.cpp
 src/solution_print.cpp
 src/fkp_solver.cpp

@@ -6,14 +6,14 @@
 namespace dckp_ienum {
 
 struct FkpResult {
-    Eigen::ArrayX<float_t> x;
-    float_t profit;
+    item_index_t fractional_idx;
+    int_profit_t ub;
+    int_profit_t profit;
     int_weight_t weight;
 
-    int_profit_t binary_profit;
-    int_weight_t binary_weight;
+    void convert(const Instance&, Solution &soln, item_index_t jp1);
 };
 
-/*std::pair<item_index_t, float_t>*/ void solve_fkp_fast(const Instance& instance, item_index_t j, Solution& soln);
+FkpResult solve_fkp_fast(const Instance& instance, item_index_t jp1, int_profit_t fixed_p, int_weight_t fixed_w);
 
 } // namespace dckp_ienum

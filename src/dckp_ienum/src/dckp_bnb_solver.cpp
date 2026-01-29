@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <deque>
 #include <queue>
-
+#include <variant>
 #include <boost/pool/object_pool.hpp>
 
 #include <boost/pool/pool_alloc.hpp>
@@ -16,9 +16,6 @@
 #include <dckp_ienum/types.hpp>
 #include <dckp_ienum/instance.hpp>
 #include <dckp_ienum/ldckp_solver.hpp>
-
-
-// #define ENABLE_CHECKS
 
 namespace dckp_ienum {
 
@@ -127,14 +124,17 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln) {
             #endif // ENABLE_CHECKS
 
             // Compute a solution to the relaxed problem
-
-            auto result = dckp_ienum::solve_ldckp(instance, soln_temp.x, j+1, soln_temp.p, soln_temp.w, jp1th_rconflicts_begin, dckp_ienum::LdckpSolverParams {});            
-            if (result.ub > 1e70) {
-               throw "aaa";
+            std::variant<LdckpResult, FkpResult> result;
+            if (false) {
+                result = dckp_ienum::solve_ldckp(instance, soln_temp.x, j+1, soln_temp.p, soln_temp.w, jp1th_rconflicts_begin, dckp_ienum::LdckpSolverParams {});
+            } else {
+                result = solve_fkp_fast(instance, j+1, soln_temp.p, soln_temp.w);
             }
-            soln_temp.ub = std::min(static_cast<int_profit_t>(result.ub), node.upper_bound);
 
-            // solve_fkp_fast(instance, j, soln_temp);
+            std::visit([&](auto& arg) {
+                arg.ub = std::min(static_cast<int_profit_t>(arg.ub), node.upper_bound);
+            }, result);
+
 
             // Is this problem at least as promising as the current best solution?
             if (soln_temp.ub <= soln.p) {
@@ -146,7 +146,14 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln) {
                 // Compute a feasible solution from the relaxed one
                 profiler::tic("soln_convert");
 
-                result.convert(instance, soln_temp, j+1);
+                std::visit([&](auto& arg) {
+                    arg.convert(instance, soln_temp, j+1);
+                }, result);
+
+                #ifdef ENABLE_CHECKS
+                std::cout << "convert check" << std::endl;
+                dckp_ienum::solution_sanity_check(soln_temp, instance, false);
+                #endif // ENABLE_CHECKS
 
                 // Greedily drop items (idx > j) that break conflicts (drop the ones with worse p/w ratio)
                 {
@@ -175,7 +182,7 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln) {
                 profiler::toc("soln_convert");
                 
                 #ifdef ENABLE_CHECKS
-                std::cout << "convert check" << std::endl;
+                std::cout << "drop check" << std::endl;
                 dckp_ienum::solution_sanity_check(soln_temp, instance);
                 #endif // ENABLE_CHECKS
                 
@@ -214,7 +221,7 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln) {
                 #endif // ENABLE_CHECKS
                 
                 // If the solution found is better than the best, use it as new best
-                if (soln_temp.p > soln.p) {
+                if (soln_temp > soln) {
                     soln = soln_temp;
                     solution_print(std::cout, soln, instance) << "\n\n";
                 }
@@ -245,7 +252,6 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln) {
             profiler::ScopedTicToc tictoc("eval_true");
             eval_soln(true);
         }
-
     }
 }
 
