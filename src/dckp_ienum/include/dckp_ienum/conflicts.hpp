@@ -6,9 +6,15 @@
 
 namespace dckp_ienum {
 
+using ConflictList = std::vector<InstanceConflict>;
+using ConflictConstIterator = ConflictList::const_iterator;
+using ConflictConstReverseIterator = ConflictList::const_reverse_iterator;
 
-using ConflictConstIterator = std::vector<InstanceConflict>::const_iterator;
-using ConflictConstReverseIterator = std::vector<InstanceConflict>::const_reverse_iterator;
+static inline ConflictConstIterator find_conflict_iterator(const ConflictList& conflicts, item_index_t item_index) {
+    return std::lower_bound(conflicts.begin(), conflicts.end(), item_index, [](const InstanceConflict& conflict, item_index_t j) {
+        return conflict.i < j;
+    });
+}
 
 // Advance conflict iterator to the beginning of the conflicts of the item with the specified index.
 static inline void advance_conflict_iterator(item_index_t item_idx, ConflictConstIterator& it, ConflictConstIterator end) {

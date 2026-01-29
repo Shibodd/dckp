@@ -10,7 +10,7 @@ void solve_dckp_greedy(const dckp_ienum::Instance& instance, Solution& soln) {
     // Iterating over items by p/w ratio, add each that fits
     for (item_index_t i = 0; i < instance.num_items(); ++i) {
         // Skip items that are already in the knapsack
-        if (soln.x(i))
+        if (soln.x[i])
             continue;
 
         // If we add this item, will the solution still be feasible?
@@ -20,9 +20,9 @@ void solve_dckp_greedy(const dckp_ienum::Instance& instance, Solution& soln) {
             continue;
         }
 
-        soln.x(i) = true;
+        soln.x[i] = true;
         if (solution_has_conflicts(instance, soln.x)) {
-            soln.x(i) = false;
+            soln.x[i] = false;
             continue;
         }
 

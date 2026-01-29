@@ -5,11 +5,11 @@
 #include <chrono>
 #include <fenv.h>
 
+#include <dckp_ienum/dckp_greedy_solver.hpp>
 #include <dckp_ienum/solution_has_conflicts.hpp>
 #include <dckp_ienum/solution_ldckp_to_dckp.hpp>
 #include <dckp_ienum/solution_sanity_check.hpp>
 #include <dckp_ienum/dckp_hillclimb_solver.hpp>
-#include <dckp_ienum/dckp_greedy_solver.hpp>
 #include <dckp_ienum/dckp_bnb_solver.hpp>
 #include <dckp_ienum/solution_print.hpp>
 #include <dckp_ienum/ldckp_solver.hpp>
@@ -51,12 +51,15 @@ int main() {
     solution.ub = std::numeric_limits<dckp_ienum::int_profit_t>::max();
     solution.w = 0;
     solution.x.resize(instance.num_items(), false);
-    dckp_ienum::solve_dckp_bnb(instance, solution);
+
+    // dckp_ienum::solve_dckp_bnb(instance, solution);
 
     // dckp_ienum::solve_dckp_ienum(instance, 2000, solution);
+    dckp_ienum::solve_dckp_hillclimb(instance, solution);
+    // dckp_ienum::solve_dckp_greedy(instance, solution);
 
     dckp_ienum::profiler::print_stats(std::cout);
     
-    // dckp_ienum::solution_sanity_check(solution, instance);
-    // dckp_ienum::solution_print(std::cout, solution, instance) << std::endl;
+    dckp_ienum::solution_sanity_check(solution, instance);
+    dckp_ienum::solution_print(std::cout, solution, instance) << std::endl;
 }

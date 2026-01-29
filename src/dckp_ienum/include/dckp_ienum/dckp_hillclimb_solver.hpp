@@ -5,8 +5,8 @@
 namespace dckp_ienum {
 
 struct HillclimbStats {
-    unsigned int swaps = 0;
-    unsigned int adds = 0;
+    std::size_t swaps = 0;
+    std::size_t adds = 0;
 
     friend std::ostream& operator<<(std::ostream& os, const HillclimbStats& stats) {
         return os << "swaps: " << stats.swaps << ", " << "adds: " << stats.adds;

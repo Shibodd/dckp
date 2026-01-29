@@ -15,7 +15,6 @@ bool solution_has_conflicts(const dckp_ienum::Instance& instance, const BoolVect
     for (conflict_index_t i = 0; i < instance.conflicts().size(); ++i) {
         const InstanceConflict& conflict = instance.conflicts().at(i);
         if (x[conflict.i] && x[conflict.j]) {
-            std::cerr << "conflict between " << instance.s2o_index(conflict.i) << " and " << instance.s2o_index(conflict.j) << "\n";
             return true;
         }
     }

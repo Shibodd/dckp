@@ -1,5 +1,4 @@
 #include <dckp_ienum/fkp_solver.hpp>
-#include "dckp_ienum/dckp_greedy_solver.hpp"
 #include "dckp_ienum/profiler.hpp"
 #include "dckp_ienum/solution_ldckp_to_dckp.hpp"
 #include "dckp_ienum/solution_sanity_check.hpp"
@@ -79,12 +78,9 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln) {
         }
 
         // Find the position of j's conflicts
-        auto jth_rconflicts_begin = std::lower_bound(instance.rconflicts().begin(), rconflicts_end, j, [](const InstanceConflict& conflict, item_index_t j) {
-            return conflict.i < j;
-        });
-        auto jp1th_conflicts_begin = std::lower_bound(instance.conflicts().begin(), conflicts_end, j+1, [](const InstanceConflict& conflict, item_index_t j) {
-            return conflict.i < j;
-        });
+        
+        auto jth_rconflicts_begin = find_conflict_iterator(instance.rconflicts(), j);
+        auto jp1th_conflicts_begin = find_conflict_iterator(instance.conflicts(), j+1);
         
         auto jp1th_rconflicts_begin = jth_rconflicts_begin;
         advance_conflict_iterator(j+1, jp1th_rconflicts_begin, rconflicts_end);
