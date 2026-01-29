@@ -1,0 +1,29 @@
+#include "dckp_ienum/profiler.hpp"
+#include <variant>
+
+#include <dckp_ienum/conflicts.hpp>
+#include <dckp_ienum/dckp_relax_solver.hpp>
+#include <dckp_ienum/ldckp_solver.hpp>
+#include <dckp_ienum/fkp_solver.hpp>
+#include <dckp_ienum/solution_greedy_improvement.hpp>
+
+namespace dckp_ienum {
+
+void solve_dckp_relax(const Instance& instance, Solution& solution, bool use_ldckp) {
+    profiler::ScopedTicToc tictoc("solve_dckp_relax");
+
+    if (use_ldckp) {
+        auto result = dckp_ienum::solve_ldckp(instance, solution.x, 0, 0, 0, instance.rconflicts().begin(), dckp_ienum::LdckpSolverParams {});
+        result.convert(instance, solution, 0);
+    } else {
+        auto result = solve_fkp_fast(instance, 0, 0, 0);
+        result.convert(instance, solution, 0);
+    }
+
+    solution_greedy_remove_conflicts(instance, solution, 0, instance.rconflicts().begin());
+
+    auto rconflicts_it = instance.rconflicts().begin();
+    solution_greedy_improve(instance, solution, 0, rconflicts_it, instance.conflicts().begin());
+}
+
+} // namespace dckp_ienum

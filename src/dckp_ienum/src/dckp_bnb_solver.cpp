@@ -15,6 +15,7 @@
 #include <dckp_ienum/types.hpp>
 #include <dckp_ienum/instance.hpp>
 #include <dckp_ienum/ldckp_solver.hpp>
+#include <dckp_ienum/solution_greedy_improvement.hpp>
 
 namespace dckp_ienum {
 
@@ -36,11 +37,10 @@ struct Node {
     };
 };
 
-void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln) {
+void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool use_ldckp) {
     profiler::ScopedTicToc tictoc("solve_dckp_bnb");
 
     const auto rconflicts_end = instance.rconflicts().end();
-    const auto conflicts_end = instance.conflicts().end();
 
     Solution soln_temp;
     soln_temp.x.reserve(instance.num_items());
@@ -121,7 +121,7 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln) {
 
             // Compute a solution to the relaxed problem
             std::variant<LdckpResult, FkpResult> result;
-            if (false) {
+            if (use_ldckp) {
                 result = dckp_ienum::solve_ldckp(instance, soln_temp.x, j+1, soln_temp.p, soln_temp.w, jp1th_rconflicts_begin, dckp_ienum::LdckpSolverParams {});
             } else {
                 result = solve_fkp_fast(instance, j+1, soln_temp.p, soln_temp.w);
@@ -140,8 +140,6 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln) {
             bool use_solution = true;
             if (use_solution) {
                 // Compute a feasible solution from the relaxed one
-                profiler::tic("soln_convert");
-
                 std::visit([&](auto& arg) {
                     arg.convert(instance, soln_temp, j+1);
                 }, result);
@@ -152,30 +150,7 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln) {
                 #endif // ENABLE_CHECKS
 
                 // Greedily drop items (idx > j) that break conflicts (drop the ones with worse p/w ratio)
-                {
-                    auto rconflicts_rit = instance.rconflicts().rbegin();
-                    const auto rconflicts_rend = std::reverse_iterator(jth_rconflicts_begin);
-
-                    for (item_index_t _i = instance.num_items(); _i > j + 1; --_i) {
-                        item_index_t i = _i - 1;
-    
-                        if (not soln_temp.x[i]) {
-                            continue;
-                        }
-    
-                        advance_reverse_conflict_iterator(i, rconflicts_rit, rconflicts_rend);
-                        if (rconflicts_rit == rconflicts_rend) {
-                            break;
-                        }
-    
-                        if (check_conflict(soln_temp.x, i, rconflicts_rit, rconflicts_rend)) {
-                            soln_temp.x[i] = false;
-                            soln_temp.p -= instance.profit(i);
-                            soln_temp.w -= instance.weight(i);
-                        }
-                    }
-                }
-                profiler::toc("soln_convert");
+                solution_greedy_remove_conflicts(instance, soln_temp, j+1, jth_rconflicts_begin);
                 
                 #ifdef ENABLE_CHECKS
                 std::cout << "drop check" << std::endl;
@@ -183,33 +158,7 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln) {
                 #endif // ENABLE_CHECKS
                 
                 // Greedily take items to improve the solution
-                
-                profiler::tic("soln_greedy");                
-                auto ith_conflicts_it = jp1th_conflicts_begin;
-                for (item_index_t i = j + 1; i < instance.num_items(); ++i) {
-                    // Advance conflict iterators to ith-item conflicts
-                    advance_conflict_iterator(i, rconflicts_it, rconflicts_end);
-                    advance_conflict_iterator(i, ith_conflicts_it, conflicts_end);
-    
-                    if (soln_temp.x[i]) {
-                        continue;
-                    }
-
-                    // Check conflicts with both items < i and items > i (they may be set by the LDCKP problem)
-                    if (check_conflict(soln_temp.x, i, rconflicts_it, rconflicts_end) || check_conflict(soln_temp.x, i, ith_conflicts_it, conflicts_end)) {
-                        continue;
-                    }
-
-                    int_weight_t w_new = soln_temp.w + instance.weight(i);
-                    if (w_new > instance.capacity()) {
-                        continue;
-                    }
-
-                    soln_temp.w = w_new;
-                    soln_temp.p = soln_temp.p + instance.profit(i);
-                    soln_temp.x[i] = true;
-                }
-                profiler::toc("soln_greedy");
+                solution_greedy_improve(instance, soln_temp, j+1, rconflicts_it, jp1th_conflicts_begin);
     
                 #ifdef ENABLE_CHECKS
                 std::cout << "greedy check" << std::endl;

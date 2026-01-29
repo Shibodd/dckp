@@ -18,6 +18,8 @@ src/dckp_bnb_solver.cpp
 src/ldckp_solver.cpp
 src/dckp_ienum_solver.cpp
 src/dckp_greedy_solver.cpp
+src/dckp_relax_solver.cpp
+src/solution_greedy_improvement.cpp
 src/dckp_hillclimb_solver.cpp
 src/instance_parser.cpp
 src/solution_print.cpp

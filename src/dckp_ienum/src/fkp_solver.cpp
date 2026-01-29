@@ -8,6 +8,8 @@
 namespace dckp_ienum {
 
 void FkpResult::convert(const Instance&, Solution &soln, item_index_t jp1) {
+    profiler::ScopedTicToc tictoc("convert_fkp");
+
     soln.p = profit;
     soln.w = weight;
     soln.ub = ub;

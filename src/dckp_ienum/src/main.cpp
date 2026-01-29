@@ -8,6 +8,7 @@
 #include <dckp_ienum/dckp_greedy_solver.hpp>
 #include <dckp_ienum/solution_has_conflicts.hpp>
 #include <dckp_ienum/solution_ldckp_to_dckp.hpp>
+#include <dckp_ienum/dckp_relax_solver.hpp>
 #include <dckp_ienum/solution_sanity_check.hpp>
 #include <dckp_ienum/dckp_hillclimb_solver.hpp>
 #include <dckp_ienum/dckp_bnb_solver.hpp>
@@ -22,22 +23,14 @@
 #include <limits>
 #include <ostream>
 #include <signal.h>
-
-void my_handler(int s)
-{
-    dckp_ienum::profiler::toc("solve_dckp_bnb");
-
-    dckp_ienum::profiler::print_stats(std::cout);
-    exit(1);
-}
+#include <stdexcept>
+#include <numeric>
 
 int main() {
-    signal(SIGINT, my_handler);
-
     feenableexcept(FE_INVALID);
 
     dckp_ienum::Instance instance;
-    instance.parse("../../Instances/KPCG_instances/C1/BPPC_4_0_2.txt_0.9");
+    instance.parse("../../Instances/KPCG_instances/R10/BPPC_2_0_8.txt_0.2");
     instance.sort_items();
 
     std::cout << "n: " << instance.num_items() << std::endl;
@@ -52,10 +45,10 @@ int main() {
     solution.w = 0;
     solution.x.resize(instance.num_items(), false);
 
-    // dckp_ienum::solve_dckp_bnb(instance, solution);
-
-    // dckp_ienum::solve_dckp_ienum(instance, 2000, solution);
-    dckp_ienum::solve_dckp_hillclimb(instance, solution);
+    // dckp_ienum::solve_dckp_relax(instance, solution, false);
+    // dckp_ienum::solve_dckp_bnb(instance, solution, false);
+    // dckp_ienum::solve_dckp_ienum(instance, 0, solution);
+    // dckp_ienum::solve_dckp_hillclimb(instance, solution);
     // dckp_ienum::solve_dckp_greedy(instance, solution);
 
     dckp_ienum::profiler::print_stats(std::cout);

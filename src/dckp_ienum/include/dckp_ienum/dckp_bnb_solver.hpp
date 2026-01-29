@@ -5,6 +5,6 @@
 
 namespace dckp_ienum {
 
-void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln);
+void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool use_ldckp);
 
 } // namespace dckp_ienum

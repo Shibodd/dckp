@@ -11,7 +11,6 @@
 #include <dckp_ienum/conflicts.hpp>
 #include <dckp_ienum/profiler.hpp>
 
-
 #ifdef ENABLE_TELEMETRY
 #include <dckp_ienum/telemetry_socket.hpp>
 #endif // ENABLE_TELEMETRY
@@ -37,6 +36,8 @@ struct Telemetry {
 #endif // ENABLE_TELEMETRY
 
 void LdckpResult::convert(const Instance& instance, Solution &soln, item_index_t jp1) {
+    profiler::ScopedTicToc tictoc("convert_ldckp");
+
     soln.ub = ub;
 
     for (item_index_t ldckp_i = 0; ldckp_i < x.size(); ++ldckp_i) {
@@ -79,12 +80,13 @@ LdckpResult solve_ldckp(const Instance& instance, std::vector<bool> fixed_items,
         {
             profiler::ScopedTicToc tictoc("ldckp_prep_ps");
 
+            ps = instance.profits().bottomRows(n).cast<float_t>();
+
             conflict_index_t cft_idx = 0;
             for (auto it = jp1th_rconflict_begin; it != rconflict_end; ++it) {
                 float_t conflict_lambda = lambdak(cft_idx++);
 
                 auto i = it->i - jp1;
-                ps(i) = static_cast<float_t>(instance.profit(it->i));
                 ps(i) -= conflict_lambda;
                 if (it->j >= jp1) {
                     ps(it->j - jp1) -= conflict_lambda;
@@ -99,13 +101,12 @@ LdckpResult solve_ldckp(const Instance& instance, std::vector<bool> fixed_items,
             profiler::ScopedTicToc tictoc("ldckp_fkp_solver");
 
             int_weight_t int_weight = fixed_items_w;
-            
+
             // Sort indices by profit / weight ratio
-            auto pws = ps.array() / ws.array().cast<float_t>();
-            std::sort(indices.begin(), indices.end(), [&pws](item_index_t a, item_index_t b) {
-                return pws(a) > pws(b);
+            std::sort(indices.begin(), indices.end(), [&](item_index_t a, item_index_t b) {
+                return (ps(a) / static_cast<float_t>(ws(a))) > (ps(b) / static_cast<float_t>(ws(b)));
             });
-            
+
             // Greedily take items
             x.setZero();
             for (item_index_t i = 0; i < n; ++i) 
@@ -165,7 +166,7 @@ LdckpResult solve_ldckp(const Instance& instance, std::vector<bool> fixed_items,
             profiler::ScopedTicToc tictoc("ldckp_sg_step");
 
             float_t alpha = params.alpha;
-            lambdak -= alpha * dlambdak;
+            lambdak -= alpha * dlambdak.normalized();
             lambdak = lambdak.cwiseMax(static_cast<float_t>(0.0));
         }
 
