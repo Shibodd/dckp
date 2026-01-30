@@ -7,8 +7,12 @@
 
 #include <dckp_ienum/profiler.hpp>
 
+// #define ENABLE_PROFILING
+
 namespace dckp_ienum {
 namespace profiler {
+
+#ifdef ENABLE_PROFILING
 
 static std::unordered_map<std::string_view, Stats> data;
 
@@ -51,6 +55,10 @@ const Stats& stats(std::string_view name) {
     return data.at(name);
 }
 
+void reset() {
+    data.clear();
+}
+
 void print_stats(std::ostream& os) {
     using T = decltype(data)::value_type;
     std::vector<std::reference_wrapper<T>> v(data.begin(), data.end());
@@ -65,6 +73,16 @@ void print_stats(std::ostream& os) {
     }
     os << "-----\n\n";
 }
+
+#else
+
+void tic(std::string_view) {}
+void toc(std::string_view) {}
+const Stats& stats(std::string_view) { throw std::runtime_error("Profiling is disabled."); }
+void reset() {}
+void print_stats(std::ostream&) {}
+
+#endif
 
 } // namespace profiler
 } // namespace dckp_ienum

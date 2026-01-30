@@ -13,6 +13,6 @@ struct HillclimbStats {
     }
 };
 
-HillclimbStats solve_dckp_hillclimb(const dckp_ienum::Instance& instance, Solution& soln);
+HillclimbStats solve_dckp_hillclimb(const dckp_ienum::Instance& instance, Solution& soln, std::atomic<bool>* stop_token, const std::function<void(const Solution&)>& solution_callback);
 
 } // namespace dckp_ienum

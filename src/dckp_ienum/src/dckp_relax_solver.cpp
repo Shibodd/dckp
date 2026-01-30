@@ -9,7 +9,7 @@
 
 namespace dckp_ienum {
 
-void solve_dckp_relax(const Instance& instance, Solution& solution, bool use_ldckp) {
+void solve_dckp_relax(const Instance& instance, Solution& solution, bool use_ldckp, std::atomic<bool>* stop_token, const std::function<void(const Solution&)>& solution_callback) {
     profiler::ScopedTicToc tictoc("solve_dckp_relax");
 
     if (use_ldckp) {
@@ -20,10 +20,25 @@ void solve_dckp_relax(const Instance& instance, Solution& solution, bool use_ldc
         result.convert(instance, solution, 0);
     }
 
+    if (*stop_token) {
+        solution.p = 0;
+        solution.w = 0;
+        std::fill(solution.x.begin(), solution.x.end(), false);
+        solution_callback(solution);
+        return;
+    }
+
     solution_greedy_remove_conflicts(instance, solution, 0, instance.rconflicts().begin());
+
+    if (*stop_token) {
+        solution_callback(solution);
+        return;
+    }
 
     auto rconflicts_it = instance.rconflicts().begin();
     solution_greedy_improve(instance, solution, 0, rconflicts_it, instance.conflicts().begin());
+
+    solution_callback(solution);
 }
 
 } // namespace dckp_ienum

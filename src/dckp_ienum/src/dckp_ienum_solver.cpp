@@ -8,6 +8,7 @@
 #include <dckp_ienum/dckp_ienum_solver.hpp>
 #include <dckp_ienum/ldckp_solver.hpp>
 #include <dckp_ienum/types.hpp>
+#include <limits>
 
 namespace dckp_ienum {
 
@@ -48,13 +49,18 @@ struct IEnumNode {
     }
 };
 
-void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Solution& soln) {
+void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Solution& soln, std::atomic<bool>* stop_token, const std::function<void(const Solution&)>& solution_callback) {
     profiler::ScopedTicToc ticto("solve_dckp_ienum");
 
     std::vector<IEnumNode> next_fifo;
     std::vector<IEnumNode> current_fifo;
 
     std::vector<item_index_t> jth_conflict_set;
+
+    soln.p = 0;
+    soln.w = 0;
+    soln.ub = 0;
+    std::fill(soln.x.begin(), soln.x.end(), false);
 
     // Push a node with no choices made
     current_fifo.emplace_back();
@@ -68,6 +74,10 @@ void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Sol
     bool solution_found = false;
 
     for (item_index_t j = 0; j < instance.num_items(); ++j) {
+        if (*stop_token) {
+            break;
+        }
+
         std::cout << "level " << j << ", " << current_fifo.size() << " nodes" << std::endl;
 
         /* Termination of unfeasible problems */
@@ -93,7 +103,19 @@ void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Sol
             }
         }
 
+        auto max_ub_it = std::max_element(current_fifo.begin(), current_fifo.end(), [](const IEnumNode& a, const IEnumNode& b) {
+            return a.ub < b.ub;
+        });
+        int_profit_t max_ub = std::numeric_limits<int_profit_t>::max();
+        if (max_ub_it != current_fifo.end()) {
+            max_ub = max_ub_it->ub;
+        }
+
         for (std::size_t parent_idx = 0; parent_idx < current_fifo.size(); ++parent_idx) {
+            if (*stop_token) {
+                break;
+            }
+
             auto& parent = current_fifo[parent_idx];
 
             /*
@@ -134,16 +156,19 @@ void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Sol
                 }
             }
 
-            // Don't add children if this is the last item - we only collect the best solution
-            if (j == instance.num_items() - 1) {                
-                if (parent.profit >= lb && parent.profit > soln.p) {
-                    solution_found = true;
-                    soln.w = parent.weight;
-                    soln.p = parent.profit;
-                    soln.x = parent.x;
-                    soln.ub = parent.ub;
-                    soln.x.resize(instance.num_items(), false);
-                }
+            if (parent.profit > soln.p) {
+                solution_found = true;
+                soln.w = parent.weight;
+                soln.p = parent.profit;
+                soln.x = parent.x;
+                soln.ub = max_ub;
+
+                soln.x.resize(instance.num_items(), false);
+                solution_callback(soln);
+            }
+
+            // Don't add children if this is the last item
+            if (j == instance.num_items() - 1) {
                 continue;
             }
 
@@ -154,7 +179,7 @@ void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Sol
             int_weight_t w = parent.weight + instance.weights()(j);
             do {
                 // Fast-path
-                if (p > soln.ub) {
+                if (p > max_ub) {
                     break;
                 }
     
@@ -205,7 +230,7 @@ void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Sol
         soln.p = 0;
         soln.w = 0;
         soln.ub = 0;
-        std::cout << "no solution found" << std::endl;
+        solution_callback(soln);
     }
 }
 

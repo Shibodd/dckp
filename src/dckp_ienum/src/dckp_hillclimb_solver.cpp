@@ -144,7 +144,7 @@ static inline void generate_moves(const Instance &instance, Solution &soln, cons
 }
 
 
-HillclimbStats solve_dckp_hillclimb(const dckp_ienum::Instance& instance, Solution& soln) {
+HillclimbStats solve_dckp_hillclimb(const dckp_ienum::Instance& instance, Solution& soln, std::atomic<bool>* stop_token, const std::function<void(const Solution&)>& solution_callback) {
     profiler::ScopedTicToc tictoc("solve_dckp_hillclimb");
 
     HillclimbStats stats;
@@ -157,6 +157,10 @@ HillclimbStats solve_dckp_hillclimb(const dckp_ienum::Instance& instance, Soluti
     std::fill(soln.x.begin(), soln.x.end(), false);
 
     do {
+        if (*stop_token) {
+            break;
+        }
+
         best_move.reset();
         best_profit = soln.p;
 
@@ -171,8 +175,15 @@ HillclimbStats solve_dckp_hillclimb(const dckp_ienum::Instance& instance, Soluti
             std::visit([&](auto& arg) {
                 arg.apply(instance, soln, stats);
             }, *best_move);
+
+            solution_callback(soln);
         }
     } while(best_move.has_value());
+
+
+    if (soln.p == 0) {
+        solution_callback(soln);
+    }
 
     return stats;
 }

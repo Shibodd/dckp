@@ -28,6 +28,7 @@ FkpResult solve_fkp_fast(const Instance& instance, item_index_t jp1, int_profit_
     FkpResult ans;
     ans.weight = fixed_w;
     ans.profit = fixed_p;
+    ans.fractional_idx = instance.num_items();
 
     for (item_index_t i = jp1; i < instance.num_items(); ++i) {
         if (ans.weight >= instance.capacity()) {

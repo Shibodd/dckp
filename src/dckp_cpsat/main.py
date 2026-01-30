@@ -1,19 +1,39 @@
 from ortools.sat.python import cp_model
 from . import instances
+import dataclasses
+import contextlib
+import csv
 
-import argparse
-import pathlib
+@dataclasses.dataclass
+class Result:
+    instance: str
+    status: str
+    solver_time: float
+    lb_time: float
+    lb: float
+    ub: float
 
-argparser = argparse.ArgumentParser()
-argparser.add_argument("instances")
-args = argparser.parse_args()
+class LbTimeSolutionCallback(cp_model.CpSolverSolutionCallback):
+    def __init__(self):
+        cp_model.CpSolverSolutionCallback.__init__(self)
+        self._best_objective_value = 0.0
+        self._best_objective_value_time = 0.0
 
-instances_paths = (f for f in pathlib.Path(".").rglob(args.instances) if f.is_file())
+    def on_solution_callback(self) -> None:
+        if self.objective_value > self._best_objective_value:
+            self._best_objective_value = self.objective_value
+            self._best_objective_value_time = self.wall_time
+            
+    @property
+    def best_objective_value_time(self) -> float:
+        return self._best_objective_value_time
 
-for instance_path in instances_paths:
-    print("\n\n####", instance_path, "####")
-    print("Parsing instance and setting up the solver.")
-    
+    @property
+    def best_objective_value(self) -> float:
+        return self._best_objective_value
+
+
+def solve(instance_path, max_t_seconds):
     model = cp_model.CpModel()
     with instances.InstanceParser(instance_path) as reader:
         params = reader.read_parameters()
@@ -33,14 +53,52 @@ for instance_path in instances_paths:
     model.maximize(profit_expr)
     model.add(weight_expr <= params.c)
 
-    solver = cp_model.CpSolver()
-    
-    print("Solving.")
-    status = solver.solve(model)
+    cbk = LbTimeSolutionCallback()
 
-    print("Best solution reported by the solver:")
-    print("Status:", status)
-    print("Items:", [idx for idx, var in vars.items() if solver.boolean_value(var)])
-    print("Profit:", solver.objective_value, f"(ub = {solver.best_objective_bound})")
-    print(f"Weight: {solver.value(weight_expr)} (capacity {params.c})")
-    print("Wall time:", solver.wall_time)
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = max_t_seconds
+    status = solver.solve(model, cbk)
+    
+    assert(solver.objective_value == cbk.best_objective_value)
+    
+    return Result(
+        instance = instance_path.name,
+        solver_time = solver.wall_time,
+        lb_time = cbk.best_objective_value_time,
+        ub = solver.best_objective_bound,
+        lb = solver.objective_value,
+        status = {
+            cp_model.CpSolverStatus.OPTIMAL : "optimal",
+            cp_model.CpSolverStatus.FEASIBLE : "feasible"
+        }.get(status, "fail")
+    )
+
+if __name__ == '__main__':
+    import argparse
+    import pathlib
+    
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("instances_file", action="store", type=pathlib.Path)
+    argparser.add_argument("-o", "--output", action="store", type=pathlib.Path)
+    args = argparser.parse_args()
+
+    with contextlib.ExitStack() as stack:
+        writer = None
+        output_file = None
+        if args.output:
+            output_file = stack.enter_context(args.output.open("wt", encoding="utf-8"))
+            writer = csv.DictWriter(
+                output_file,
+                Result.__dataclass_fields__
+            )
+            writer.writeheader()
+
+        for filename in args.instances_file.open("rt", encoding="utf-8"):
+            filename = filename.strip()
+            result = solve(args.instances_file.parent / filename, 30)
+            if writer:
+                writer.writerow(dataclasses.asdict(result))
+                output_file.flush()
+
+            print(result)
+                

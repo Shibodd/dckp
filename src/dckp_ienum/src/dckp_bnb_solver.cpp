@@ -2,7 +2,6 @@
 #include "dckp_ienum/profiler.hpp"
 #include "dckp_ienum/solution_ldckp_to_dckp.hpp"
 #include "dckp_ienum/solution_sanity_check.hpp"
-#include <dckp_ienum/solution_print.hpp>
 #include <dckp_ienum/conflicts.hpp>
 #include <algorithm>
 #include <deque>
@@ -37,10 +36,14 @@ struct Node {
     };
 };
 
-void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool use_ldckp) {
+void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool use_ldckp, std::atomic<bool>* stop_token, const std::function<void(const Solution&)>& solution_callback) {
     profiler::ScopedTicToc tictoc("solve_dckp_bnb");
 
     const auto rconflicts_end = instance.rconflicts().end();
+
+    soln.p = 0;
+    soln.w = 0;
+    std::fill(soln.x.begin(), soln.x.end(), false);
 
     Solution soln_temp;
     soln_temp.x.reserve(instance.num_items());
@@ -67,13 +70,17 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool u
                 soln.w = node.weight;
                 soln.p = node.profit;
                 soln.x = node.id;
+                solution_callback(soln);
             }
             continue;
         }
 
+        if (*stop_token) {
+            return;
+        }
+
         // Check the upper bound again in case the best profit changed
         if (node.upper_bound <= soln.p) {
-            std::cout << node.upper_bound << " < " << soln.p << std::endl;
             continue;
         }
 
@@ -168,7 +175,7 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool u
                 // If the solution found is better than the best, use it as new best
                 if (soln_temp > soln) {
                     soln = soln_temp;
-                    solution_print(std::cout, soln, instance) << "\n\n";
+                    solution_callback(soln);
                 }
             }
 
@@ -197,6 +204,10 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool u
             profiler::ScopedTicToc tictoc("eval_true");
             eval_soln(true);
         }
+    }
+
+    if (soln.p == 0) {
+        solution_callback(soln);
     }
 }
 

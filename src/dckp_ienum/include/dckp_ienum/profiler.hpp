@@ -39,6 +39,8 @@ struct Stats {
     }
 };
 
+
+void reset();
 void tic(std::string_view name);
 void toc(std::string_view name);
 const Stats& stats(std::string_view name);
