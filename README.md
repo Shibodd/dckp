@@ -2,8 +2,7 @@ Solvers for the Disjunctively Constrained 0-1 Knapsack Problem (DCKP).
 
 Developed for the final exam of the Optimization Algorithms course offered by UNIMORE.
 
-
-First, put your instances in the Instances/ folder and edit the instances_list.txt file if needed. That file contains a list of paths relative to itself to each instance, one per line. The file contained in the folder is the one used in the benchmarks by the candidate.
+First, put the instances from Bettinelli et.al (the ones you uploaded to google drive) in the Instances/ folder and edit the instances_list.txt file if needed. That file contains a list of paths relative to itself to each instance, one per line. The file contained in the folder is the one used in the benchmarks by the candidate.
 
 To run the CP-SAT solver, move to the src/ folder and run `python3 -m dckp_cpsat.main INSTANCE_FILE`.
 
