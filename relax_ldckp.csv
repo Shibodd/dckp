@@ -1,0 +1,6 @@
+instance,status,solver_time,lb_time,lb,ub
+./KPCG_instances/C3/BPPC_3_0_1.txt_0.9,feasible,0.249606,0.249589,92,647
+./KPCG_instances/C3/BPPC_8_0_10.txt_0.9,feasible,0.225423,0.225414,786,3119
+./KPCG_instances/C3/BPPC_3_0_10.txt_0.9,feasible,0.224821,0.224813,109,647
+./KPCG_instances/C3/BPPC_6_0_1.txt_0.9,feasible,0.0126583,0.0126526,794,3119
+./KPCG_instances/C3/BPPC_7_0_1.txt_0.9,feasible,0.0500272,0.05002,826,3119

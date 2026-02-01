@@ -1,0 +1,17 @@
+\begin{table}
+\centering
+\caption{CAPTION}
+\label{LABEL}
+\small % Slightly smaller font to fit 16 columns
+\setlength{\tabcolsep}{2pt} % Adjust spacing to prevent overflow
+\makebox[\textwidth][c]{
+\begin{tabular}{l|ccc|ccc|ccc|ccc|ccc}
+\toprule
+ & \multicolumn{3}{c|}{Solver T[s]} & \multicolumn{3}{c|}{Act. Opt G[\%]} & \multicolumn{3}{c|}{Est. Opt G[\%]} & \multicolumn{3}{c|}{LB T[s]} & \multicolumn{3}{c}{Solved[/16]} \\
+Density & cpsat & bnb & ienum & cpsat & bnb & ienum & cpsat & bnb & ienum & cpsat & bnb & ienum & cpsat & bnb & ienum \\
+\midrule
+DATA
+\bottomrule
+\end{tabular}
+}
+\end{table}

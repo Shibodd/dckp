@@ -47,7 +47,7 @@ struct Arguments {
 std::unordered_map<std::string, Solver> solvers {
     {
         "relax", [](const dckp_ienum::Instance& instance, dckp_ienum::Solution& soln, std::atomic<bool>* stop_token, const SolutionCallback& cbk) {
-            dckp_ienum::solve_dckp_relax(instance, soln, false, stop_token, cbk);
+            dckp_ienum::solve_dckp_relax(instance, soln, true, stop_token, cbk);
         }
     },
     {
@@ -59,7 +59,7 @@ std::unordered_map<std::string, Solver> solvers {
         "ienum", [](const dckp_ienum::Instance& instance, dckp_ienum::Solution& soln, std::atomic<bool>* stop_token, const SolutionCallback& cbk) {
             // run greedy solver to get a lower bound
             dckp_ienum::solve_dckp_greedy(instance, soln, stop_token, cbk);
-            dckp_ienum::solve_dckp_ienum(instance, soln.p, soln, stop_token, cbk);
+            dckp_ienum::solve_dckp_ienum(instance, soln, stop_token, cbk);
         },
     },
     {

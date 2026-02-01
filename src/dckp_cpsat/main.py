@@ -33,9 +33,9 @@ class LbTimeSolutionCallback(cp_model.CpSolverSolutionCallback):
         return self._best_objective_value
 
 
-def solve(instance_path, max_t_seconds):
+def solve(root_path, instance_path_str, max_t_seconds):
     model = cp_model.CpModel()
-    with instances.InstanceParser(instance_path) as reader:
+    with instances.InstanceParser(root_path / instance_path_str) as reader:
         params = reader.read_parameters()
 
         profit_expr = 0
@@ -62,7 +62,7 @@ def solve(instance_path, max_t_seconds):
     assert(solver.objective_value == cbk.best_objective_value)
     
     return Result(
-        instance = instance_path.name,
+        instance = instance_path_str,
         solver_time = solver.wall_time,
         lb_time = cbk.best_objective_value_time,
         ub = solver.best_objective_bound,
@@ -94,8 +94,8 @@ if __name__ == '__main__':
             writer.writeheader()
 
         for filename in args.instances_file.open("rt", encoding="utf-8"):
-            filename = filename.strip()
-            result = solve(args.instances_file.parent / filename, 30)
+            instance_path = filename.strip()
+            result = solve(args.instances_file.parent, instance_path, 30)
             if writer:
                 writer.writerow(dataclasses.asdict(result))
                 output_file.flush()

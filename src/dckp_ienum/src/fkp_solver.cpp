@@ -12,7 +12,7 @@ void FkpResult::convert(const Instance&, Solution &soln, item_index_t jp1) {
 
     soln.p = profit;
     soln.w = weight;
-    soln.ub = ub;
+    soln.ub = ub; // std::min(ub, soln.ub);
 
     for (item_index_t i = jp1; i < fractional_idx; ++i) {
         soln.x[i] = true;

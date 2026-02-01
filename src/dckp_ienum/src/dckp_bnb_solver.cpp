@@ -53,30 +53,29 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool u
     queue.emplace_back(soln_temp.ub);
 
     while (not queue.empty()) {
+        if (*stop_token) {
+            break;
+        }
+        
         // Move node out of the queue
-
         profiler::tic("dequeue_node");
         std::pop_heap(queue.begin(), queue.end(), Node::UpperBoundLt {});
         const Node node(std::move(queue.back()));
         queue.pop_back();
         profiler::toc("dequeue_node");
 
+        // Only for info purposes. The actual UB will be set at the end of the function.
+        soln.ub = node.upper_bound;
+
         const item_index_t j = node.id.size();
         if (j >= instance.num_items()) {
-            std::cout << "leaf w/ p=" << node.profit << std::endl;
-
             if (node.profit > soln.p) {
-                soln.ub = node.upper_bound;
                 soln.w = node.weight;
                 soln.p = node.profit;
                 soln.x = node.id;
                 solution_callback(soln);
             }
             continue;
-        }
-
-        if (*stop_token) {
-            return;
         }
 
         // Check the upper bound again in case the best profit changed
@@ -135,12 +134,11 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool u
             }
 
             std::visit([&](auto& arg) {
-                arg.ub = std::min(static_cast<int_profit_t>(arg.ub), node.upper_bound);
+                soln_temp.ub = arg.ub;
             }, result);
 
-
             // Is this problem at least as promising as the current best solution?
-            if (soln_temp.ub <= soln.p) {
+            if (soln_temp.ub < soln.p) {
                 return;
             }
 
@@ -173,8 +171,10 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool u
                 #endif // ENABLE_CHECKS
                 
                 // If the solution found is better than the best, use it as new best
-                if (soln_temp > soln) {
-                    soln = soln_temp;
+                if (soln_temp.p > soln.p) {
+                    soln.p = soln_temp.p;
+                    soln.w = soln_temp.w;
+                    soln.x = soln_temp.x;
                     solution_callback(soln);
                 }
             }
@@ -182,8 +182,8 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool u
             profiler::tic("push_node");
             // Push the node to the queue
             auto& new_node = queue.emplace_back(soln_temp.ub);
-            new_node.id = soln_temp.x;
-            new_node.id.resize(j + 1); // TODO: change this
+            new_node.id = node.id;
+            new_node.id.resize(j + 1, value);
             new_node.weight = node.weight;
             new_node.profit = node.profit;
             if (value) {
@@ -204,6 +204,14 @@ void solve_dckp_bnb(const dckp_ienum::Instance& instance, Solution& soln, bool u
             profiler::ScopedTicToc tictoc("eval_true");
             eval_soln(true);
         }
+    }
+
+    if (queue.empty()) {
+        // Either the optimum was found or we have a bug :)
+        soln.ub = soln.p;
+    } else {
+        // Algorithm was terminated early, use the worst upper bound we have
+        soln.ub = queue.front().upper_bound;
     }
 
     if (soln.p == 0) {

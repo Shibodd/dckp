@@ -5,6 +5,6 @@
 
 namespace dckp_ienum {
 
-void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Solution& soln, std::atomic<bool>* stop_token, const std::function<void(const Solution&)>& solution_callback);
+void solve_dckp_ienum(const dckp_ienum::Instance& instance, Solution& soln, std::atomic<bool>* stop_token, const std::function<void(const Solution&)>& solution_callback);
 
 } // namespace dckp_ienum

@@ -49,18 +49,13 @@ struct IEnumNode {
     }
 };
 
-void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Solution& soln, std::atomic<bool>* stop_token, const std::function<void(const Solution&)>& solution_callback) {
+void solve_dckp_ienum(const dckp_ienum::Instance& instance, Solution& soln, std::atomic<bool>* stop_token, const std::function<void(const Solution&)>& solution_callback) {
     profiler::ScopedTicToc ticto("solve_dckp_ienum");
 
     std::vector<IEnumNode> next_fifo;
     std::vector<IEnumNode> current_fifo;
 
     std::vector<item_index_t> jth_conflict_set;
-
-    soln.p = 0;
-    soln.w = 0;
-    soln.ub = 0;
-    std::fill(soln.x.begin(), soln.x.end(), false);
 
     // Push a node with no choices made
     current_fifo.emplace_back();
@@ -71,17 +66,21 @@ void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Sol
     auto jth_conflicts_begin = instance.conflicts().begin();
     auto conflicts_end = instance.conflicts().end();
 
-    bool solution_found = false;
-
     for (item_index_t j = 0; j < instance.num_items(); ++j) {
-        if (*stop_token) {
-            break;
-        }
-
         std::cout << "level " << j << ", " << current_fifo.size() << " nodes" << std::endl;
 
         /* Termination of unfeasible problems */
         if (current_fifo.empty()) {
+            break;
+        }
+
+        // Update the current upper bound
+        soln.ub = std::max_element(current_fifo.begin(), current_fifo.end(), [](const IEnumNode& a, const IEnumNode& b) {
+            return a.ub < b.ub;
+        })->ub;
+
+        if (*stop_token) {
+            std::cout << "stopped" << std::endl;
             break;
         }
 
@@ -101,14 +100,6 @@ void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Sol
                     jth_conflict_set.insert(it, conflicting_item);
                 }
             }
-        }
-
-        auto max_ub_it = std::max_element(current_fifo.begin(), current_fifo.end(), [](const IEnumNode& a, const IEnumNode& b) {
-            return a.ub < b.ub;
-        });
-        int_profit_t max_ub = std::numeric_limits<int_profit_t>::max();
-        if (max_ub_it != current_fifo.end()) {
-            max_ub = max_ub_it->ub;
         }
 
         for (std::size_t parent_idx = 0; parent_idx < current_fifo.size(); ++parent_idx) {
@@ -151,25 +142,16 @@ void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Sol
                 }
 
                 if (dominated) {
-                    // std::cout << "dominated" << std::endl;
                     continue;
                 }
             }
 
             if (parent.profit > soln.p) {
-                solution_found = true;
                 soln.w = parent.weight;
                 soln.p = parent.profit;
                 soln.x = parent.x;
-                soln.ub = max_ub;
-
                 soln.x.resize(instance.num_items(), false);
                 solution_callback(soln);
-            }
-
-            // Don't add children if this is the last item
-            if (j == instance.num_items() - 1) {
-                continue;
             }
 
             bool add_true = false;
@@ -178,11 +160,6 @@ void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Sol
             int_profit_t p = parent.profit + instance.profits()(j);
             int_weight_t w = parent.weight + instance.weights()(j);
             do {
-                // Fast-path
-                if (p > max_ub) {
-                    break;
-                }
-    
                 // C1
                 if (w > instance.capacity()) {
                     break;
@@ -200,38 +177,48 @@ void solve_dckp_ienum(const dckp_ienum::Instance& instance, int_profit_t lb, Sol
             } while (false);
 
             // C4
-            int_profit_t ub_true = add_true? std::min(solve_fkp_fast(instance, j+1, p, w).ub, parent.ub) : 0;
-            int_profit_t ub_false = std::min(solve_fkp_fast(instance, j+1, parent.profit, parent.weight).ub, parent.ub);
+            int_profit_t ub_true = add_true? solve_fkp_fast(instance, j+1, p, w).ub : 0;
+            int_profit_t ub_false = solve_fkp_fast(instance, j+1, parent.profit, parent.weight).ub;
 
-            if (add_true && ub_true >= lb) {
-                profiler::ScopedTicToc tictoc("create_true_node");
-                next_fifo.emplace_back(parent, j, p, w, jth_conflict_set, ub_true);
-
-                if (p > lb) {
-                    lb = p;
+            if (add_true) {
+                if (ub_true >= soln.p) {
+                    profiler::ScopedTicToc tictoc("create_true_node");
+                    next_fifo.emplace_back(parent, j, p, w, jth_conflict_set, ub_true);
                 }
             }
-            if (ub_false >= lb) {
+            if (ub_false >= soln.p) {
                 profiler::ScopedTicToc tictoc("create_false_node");
                 next_fifo.push_back(parent);
                 next_fifo.back().ub = ub_false;
+            }
+
+            if (next_fifo.size() > 1'000'000) {
+                return;
             }
         }
 
         // Swap the two FIFOs
         current_fifo.swap(next_fifo);
         next_fifo.clear();
-        next_fifo.reserve(current_fifo.size() * 2);
     }
 
-    if (not solution_found) {
-        soln.x.clear();
-        soln.x.resize(instance.num_items(), false);
-        soln.p = 0;
-        soln.w = 0;
-        soln.ub = 0;
-        solution_callback(soln);
+    if (not current_fifo.empty()) {
+        // Update the current upper bound
+        soln.ub = std::max_element(current_fifo.begin(), current_fifo.end(), [](const IEnumNode& a, const IEnumNode& b) {
+            return a.ub < b.ub;
+        })->ub;
+
+        for (auto& node : current_fifo) {
+            if (node.profit > soln.p) {
+                soln.w = node.weight;
+                soln.p = node.profit;
+                soln.x = node.x;
+                soln.x.resize(instance.num_items(), false);
+                solution_callback(soln);
+            }
+        }
     }
+
 }
 
 } // namespace dckp_ienum

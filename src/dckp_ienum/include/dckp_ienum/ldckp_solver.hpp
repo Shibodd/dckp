@@ -10,8 +10,8 @@
 namespace dckp_ienum {
 
 struct LdckpSolverParams {
-    float_t alpha = 10.0;
-    std::size_t k_max = 20;
+    float_t alpha = 2.0;
+    std::size_t k_max = 500;
 };
 
 struct LdckpResult {

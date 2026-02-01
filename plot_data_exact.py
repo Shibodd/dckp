@@ -70,6 +70,7 @@ def add_scale(df):
         df['instance'].str.extract(r'/[CR](\d+)/', expand=False)
         .astype('float')
         .astype('Int64')
+        .fillna(0)
     )
     
 def add_correlation(df):
@@ -116,57 +117,62 @@ assert(check_sane_self_bounds(reference_df))
 assert(check_sane_self_bounds(reference_df))
 
 
-algos = ["cpsat", "bnb_2", "ienum"]
+algos = ["cpsat", "bnb", "ienum"]
 dfs = {
     algo: parse_df(pathlib.Path(algo).with_suffix(".csv"))
     for algo in algos
 }
 
 combined = (
-    pd.concat(dfs, names=["algorithm"])
-      .reset_index(level="algorithm")
+    pd.concat(dfs, names=["Solver"])
+      .reset_index(level="Solver")
 )
 
-summary = (
-    combined[combined["solved"]]
-    .groupby(["algorithm", "correlation", "scale"], as_index=False, observed=True)
-    .agg(
-        avg_solver_time=("solver_time", "mean"),
-        avg_optimality_gap=("actual_optimality_gap", "mean"),
-        avg_est_optimality_gap=("estimated_optimality_gap", "mean"),
-        avg_lb_time=("lb_time", "mean"),
-        solved=("solved", "sum")
-    )
+grouped = combined.groupby(["correlation", "scale", "density", "Solver"], observed=True).agg(
+    avg_solver_time=("solver_time", "mean"),
+    avg_optimality_gap=("actual_optimality_gap", "mean"),
+    avg_est_optimality_gap=("estimated_optimality_gap", "mean"),
+    avg_lb_time=("lb_time", "mean"),
+    solved=("solved", "sum")
 )
 
-import seaborn
+# Unstack 'Solver' so that avg_solver_time and avg_optimality_gap are under each Solver
+pivot_df = grouped.unstack(level="Solver")
 
-seaborn.stripplot(combined[combined["solved"]], x='algorithm', y='solver_time')
-plt.gca().set_yscale('log')
-plt.show()
+# Get unique pairs to iterate through
+pairs = grouped.index.droplevel(["density", "Solver"]).unique()
 
-# for (correlation, scale), df_cs in summary.groupby(["correlation", "scale"], observed=True):
+for corr, scale in pairs:
+    # Select the specific data for this table
+    # .xs (cross-section) pulls data for specific levels and drops them from the index
+    sub_df = pivot_df.xs((corr, scale), level=("correlation", "scale")).copy()
     
-"""
-table = (
-    df_cs
-    .set_index("algorithm")[["solved", "avg_solver_time", "avg_lb_time", "avg_optimality_gap", "avg_est_optimality_gap"]]
-    .sort_index()
-    .reindex(algos)
-)
-table = table.rename(columns={
-    "solved": "Solved [/32]",
-    "avg_solver_time": "Solve Time [s]",
-    "avg_lb_time": "LB Time [s]",
-    "avg_optimality_gap": "Act. Opt Gap",
-    "avg_est_optimality_gap": "Est. Opt Gap",
-})
+    print(f"\n% --- LaTeX Table: Correlation {corr}, Scale {scale} ---")
+    
+    sub_df = sub_df.reindex(columns=algos, level=1)
+    
+    # Format numbers
+    sub_df['avg_solver_time'] = sub_df['avg_solver_time'].round(2)
+    sub_df['avg_lb_time'] = sub_df['avg_solver_time'].round(2)
+    sub_df['avg_optimality_gap'] = sub_df['avg_optimality_gap'].apply(lambda col: (col * 1e2).round(2))
+    sub_df['avg_est_optimality_gap'] = sub_df['avg_est_optimality_gap'].apply(lambda col: (col * 1e2).round(2))
+    
+    corr = "C" if corr == "correlated" else "R"
+    
+    sub_df = sub_df.rename(columns={
+        "avg_solver_time": "Solve Time [s]",
+        "avg_lb_time": "LB Time [s]",
+        "avg_optimality_gap": "Act Opt Gap [\%]",
+        "avg_est_optimality_gap": "Est Opt Gap [\%]"
+    })
+    
+    latex_output = sub_df.to_latex(
+        column_format="l" + "rr" * len(pivot_df.columns.levels[1]),
+        caption=f"{corr}{scale} - exact solvers",
+        label=f"tab:{corr}{scale}exact",
+        escape=False,
+        multicolumn_format='c',
+        float_format="%.2f"
+    )
 
-corr = "C" if correlation == "correlated" else "R"
-
-print(table.to_latex(
-    float_format="%.3f",
-    caption=f"{corr}{scale} - exact solvers",
-    label=f"tab:{corr}{scale}_exact",
-))
-"""
+    print(latex_output)
